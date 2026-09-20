@@ -221,6 +221,33 @@ details.more[open] > summary::before{transform:rotate(90deg)}
 
 .foot{font-size:12px;color:var(--muted);line-height:1.65;border-top:1px solid var(--line-soft);padding-top:14px}
 .foot b{color:var(--ink-2)}
+/* 사진 크게 보기 */
+.lightbox{position:fixed;inset:0;z-index:60;background:rgba(6,10,14,.93);
+  display:flex;align-items:center;justify-content:center;
+  padding:calc(14px + env(safe-area-inset-top,0px)) 14px calc(14px + env(safe-area-inset-bottom,0px))}
+.lightbox img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
+.lightbox .x{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));right:12px;
+  width:42px;height:42px;min-height:0;padding:0;border-radius:50%;
+  background:rgba(255,255,255,.16);border:none;color:#fff;font-size:20px;line-height:1}
+.frame img,.hist-thumbs img{cursor:zoom-in}
+
+/* 지난 기록 */
+.hist{border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface-2);padding:11px;margin-top:9px}
+.hist-top{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.hist-when{font-weight:600;color:var(--ink-2)}
+.hist-cost{margin-left:auto}
+.hist-del{min-height:28px;width:28px;padding:0;font-size:14px;color:var(--muted);background:transparent;border-color:transparent}
+.hist-del:hover{border-color:var(--line);color:var(--bad)}
+.hist-thumbs{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+.hist-thumbs img{width:54px;height:54px;object-fit:cover;border-radius:7px;border:1px solid var(--line);display:block}
+.hist-peek{margin:9px 0 0;font-size:13.5px;line-height:1.6;color:var(--ink-2);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hist-body{margin-top:11px;display:flex;flex-direction:column;gap:10px}
+.hist-quote{font-size:13px;color:var(--muted);white-space:pre-wrap;line-height:1.6;
+  border-left:2px solid var(--accent-line);padding-left:9px}
+.hist-pts{display:flex;flex-wrap:wrap;gap:6px}
+.hist-pt{font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:999px;
+  background:var(--accent-wash);color:var(--accent);word-break:keep-all}
 .toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom,0px));transform:translate(-50%,12px);
   background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-size:13.5px;font-weight:600;
   opacity:0;pointer-events:none;transition:.2s;z-index:40;max-width:86vw;text-align:center;box-shadow:var(--shadow-md)}
@@ -349,6 +376,18 @@ details.more[open] > summary::before{transform:rotate(90deg)}
         <button class="ghost" id="toneSaveDefault">지금 조합을 기본으로 저장</button>
         <button class="ghost" id="toneReset">기본 조합 불러오기</button>
         <span id="toneDefaultMark" style="font-size:12px;color:var(--good);font-weight:600"></span>
+      </div>
+    </details>
+  </section>
+
+  <!-- 지난 기록 -->
+  <section class="panel" id="histPanel">
+    <details class="more" id="histBox">
+      <summary>지난 기록 <span class="count" id="histCount">0</span></summary>
+      <div class="stack" style="margin-top:12px">
+        <input type="text" id="histFind" placeholder="글귀나 문자 내용으로 찾기" autocomplete="off">
+        <div id="histList"></div>
+        <button class="ghost" id="histClear" style="color:var(--bad);align-self:flex-start">기록 전체 지우기</button>
       </div>
     </details>
   </section>
@@ -488,6 +527,8 @@ if ("serviceWorker" in navigator) {
     styleSaved:$("#styleSaved"), storeWarn:$("#storeWarn"),
     backupOut:$("#backupOut"), backupIn:$("#backupIn"), backupText:$("#backupText"),
     tones:$("#tones"), toneReset:$("#toneReset"), toneBox:$("#toneBox"),
+    histPanel:$("#histPanel"), histBox:$("#histBox"), histCount:$("#histCount"),
+    histList:$("#histList"), histFind:$("#histFind"), histClear:$("#histClear"),
     notice:$("#notice"), results:$("#results"), go:$("#go"), stop:$("#stop"),
     toast:$("#toast"), tip:$("#installTip"), how:$("#installHow"), foot:$("#foot")
   };
@@ -536,6 +577,8 @@ if ("serviceWorker" in navigator) {
     shots.forEach(function(s,i){
       var d = document.createElement("div"); d.className="frame";
       var im = document.createElement("img"); im.src=s.url; im.alt="올린 사진 "+(i+1);
+      im.title = "눌러서 크게 보기";
+      im.onclick = function(){ showBig(s.url, "올린 사진 "+(i+1)); };
       var b = document.createElement("button"); b.type="button"; b.textContent="×";
       b.setAttribute("aria-label",(i+1)+"번째 사진 빼기");
       b.onclick = function(){ URL.revokeObjectURL(s.url); shots.splice(i,1); drawFilm(); };
@@ -570,13 +613,39 @@ if ("serviceWorker" in navigator) {
           c.getContext("2d").drawImage(img,0,0,cw,ch);
           var data = c.toDataURL("image/jpeg",0.85);
           URL.revokeObjectURL(url);
-          resolve({ type:"image", source:{ type:"base64", media_type:"image/jpeg", data:data.split(",")[1] } });
+          var block = { type:"image", source:{ type:"base64", media_type:"image/jpeg", data:data.split(",")[1] } };
+          /* 같은 캔버스에서 보관용 Blob 도 뽑아 둔다 — 기록에 넣고 나중에 다시 쓴다 */
+          if (c.toBlob){
+            c.toBlob(function(bl){ resolve({ block:block, blob:bl }); }, "image/jpeg", 0.8);
+          } else {
+            resolve({ block:block, blob:null });
+          }
         }catch(err){ URL.revokeObjectURL(url); reject(err); }
       };
       img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error("이미지를 읽지 못했습니다")); };
       img.src = url;
     });
   }
+
+  /* ================= 사진 크게 보기 ================= */
+  var box = null;
+  function showBig(src, alt){
+    closeBig();
+    box = document.createElement("div");
+    box.className = "lightbox";
+    box.setAttribute("role","dialog");
+    box.setAttribute("aria-label","사진 크게 보기");
+    var im = document.createElement("img"); im.src = src; im.alt = alt || "올린 사진";
+    var x = document.createElement("button");
+    x.type = "button"; x.className = "x"; x.textContent = "\u00d7";
+    x.setAttribute("aria-label","닫기");
+    box.appendChild(im); box.appendChild(x);
+    box.addEventListener("click", closeBig);
+    document.body.appendChild(box);
+    x.focus();
+  }
+  function closeBig(){ if (box && box.parentNode) box.parentNode.removeChild(box); box = null; }
+  document.addEventListener("keydown", function(e){ if (e.key === "Escape") closeBig(); });
 
   /* ================= 글귀 읽기 · 포인트 고르기 ================= */
   var quote = null;   // {full, points:[{text, on}]}
@@ -1097,10 +1166,12 @@ if ("serviceWorker" in navigator) {
     return d;
   }
 
+  var lastBlobs = [];
   function apiCall(files, prompt, tool, signal, maxTok){
     var key = el.key.value.trim();
     return Promise.all(files.map(prepImage)).then(function(imgs){
-      var content = imgs.slice();
+      lastBlobs = imgs.map(function(x){ return x.blob; }).filter(Boolean);
+      var content = imgs.map(function(x){ return x.block; });
       content.push({ type:"text", text: prompt });
       return fetch("https://api.anthropic.com/v1/messages", {
         method:"POST", signal:signal,
@@ -1162,7 +1233,7 @@ if ("serviceWorker" in navigator) {
   /* ================= 결과 ================= */
   var isTouch = (function(){ try{ return window.matchMedia("(pointer:coarse)").matches; }catch(e){ return false; } })();
 
-  function card(m, isSample){
+  function card(m, isSample, onEdit){
     var box = document.createElement("div");
     box.className = "card" + (isSample ? " sample":"");
     var top = document.createElement("div"); top.className="card-top";
@@ -1209,7 +1280,15 @@ if ("serviceWorker" in navigator) {
         acts.appendChild(sendLink);
       }
       body.appendChild(acts);
-      text.addEventListener("input", refresh);
+      var editT;
+      text.addEventListener("input", function(){
+        refresh();
+        if (!onEdit) return;
+        clearTimeout(editT);
+        editT = setTimeout(function(){
+          onEdit(text.innerText.replace(new RegExp(String.fromCharCode(160),"g")," "));
+        }, 600);
+      });
     }
     refresh();
     box.appendChild(body);
@@ -1255,6 +1334,224 @@ if ("serviceWorker" in navigator) {
     if (c) el.results.appendChild(c);
     try{ el.results.scrollIntoView({behavior:"smooth",block:"start"}); }catch(e){ el.results.scrollIntoView(); }
   }
+
+  /* ================= 지난 기록 (IndexedDB) ================= */
+  /* 사진까지 담아야 해서 localStorage 로는 용량이 모자란다. */
+  var HIST_MAX = 80;
+  var dbP = null, histOK = true, histCache = [], histUrls = [];
+
+  function openDB(){
+    if (dbP) return dbP;
+    dbP = new Promise(function(res, rej){
+      if (!window.indexedDB) return rej(new Error("no indexedDB"));
+      var q = indexedDB.open("banca", 1);
+      q.onupgradeneeded = function(){
+        var d = q.result;
+        if (!d.objectStoreNames.contains("runs")) d.createObjectStore("runs", { keyPath:"id" });
+      };
+      q.onsuccess = function(){ res(q.result); };
+      q.onerror = function(){ rej(q.error || new Error("open failed")); };
+    });
+    return dbP;
+  }
+  function store(mode){
+    return openDB().then(function(d){ return d.transaction("runs", mode).objectStore("runs"); });
+  }
+  function req(r){
+    return new Promise(function(res, rej){
+      r.onsuccess = function(){ res(r.result); };
+      r.onerror = function(){ rej(r.error); };
+    });
+  }
+  function histAll(){ return store("readonly").then(function(st){ return req(st.getAll()); }); }
+  function histPut(rec){ return store("readwrite").then(function(st){ return req(st.put(rec)); }); }
+  function histDel(id){ return store("readwrite").then(function(st){ return req(st["delete"](id)); }); }
+  function histWipe(){ return store("readwrite").then(function(st){ return req(st.clear()); }); }
+
+  function saveRun(data){
+    if (!histOK) return Promise.resolve();
+    var rec = {
+      id: Date.now(),
+      at: new Date().toISOString(),
+      mode: mode,
+      len: targetLen,
+      quote: (quote && quote.full) || "",
+      points: pickedPoints(),
+      read: String(data.read || ""),
+      messages: (data.messages || []).map(function(m){
+        return { tone:String(m.tone||""), text:String(m.text||"") };
+      }),
+      cost: runCost ? Math.round(runCost.won) : 0,
+      inTok: runCost ? runCost.inTok : 0,
+      outTok: runCost ? runCost.outTok : 0,
+      photos: lastBlobs.slice(0, 5)
+    };
+    return histPut(rec).then(function(){
+      return histAll().then(function(rows){
+        rows.sort(function(a,b){ return b.id - a.id; });
+        var extra = rows.slice(HIST_MAX);
+        return Promise.all(extra.map(function(r){ return histDel(r.id); }));
+      });
+    }).then(loadHist)["catch"](function(){ histFailed(); });
+  }
+  function histFailed(){
+    histOK = false;
+    el.histPanel.hidden = true;
+  }
+
+  function loadHist(){
+    return histAll().then(function(rows){
+      rows.sort(function(a,b){ return b.id - a.id; });
+      histCache = rows;
+      el.histCount.textContent = String(rows.length);
+      drawHist();
+    })["catch"](function(){ histFailed(); });
+  }
+
+  function fmtWhen(iso){
+    var d = new Date(iso);
+    if (isNaN(d)) return "";
+    var h = d.getHours(), ap = h < 12 ? "오전" : "오후";
+    var hh = h % 12; if (!hh) hh = 12;
+    var mm = d.getMinutes(); if (mm < 10) mm = "0" + mm;
+    return (d.getMonth()+1) + "월 " + d.getDate() + "일 " + ap + " " + hh + ":" + mm;
+  }
+
+  function drawHist(){
+    histUrls.forEach(function(u){ try{ URL.revokeObjectURL(u); }catch(e){} });
+    histUrls = [];
+    el.histList.textContent = "";
+
+    var q = el.histFind.value.trim().toLowerCase();
+    var rows = histCache.filter(function(r){
+      if (!q) return true;
+      var hay = (r.quote + " " + r.read + " " +
+                 r.messages.map(function(m){ return m.tone + " " + m.text; }).join(" ")).toLowerCase();
+      return hay.indexOf(q) !== -1;
+    });
+
+    if (!rows.length){
+      var p = document.createElement("p");
+      p.style.cssText = "margin:10px 0 0;font-size:13px;color:var(--muted)";
+      p.textContent = histCache.length ? "찾는 내용이 없어요." : "아직 기록이 없습니다. 문자를 만들면 여기에 쌓입니다.";
+      el.histList.appendChild(p);
+      return;
+    }
+
+    rows.forEach(function(r){
+      var d = document.createElement("div"); d.className = "hist";
+
+      var top = document.createElement("div"); top.className = "hist-top";
+      var when = document.createElement("span"); when.className = "hist-when"; when.textContent = fmtWhen(r.at);
+      var tag = document.createElement("span"); tag.className = "tag";
+      tag.textContent = r.mode === "quote" ? "글귀" : "상품";
+      var cost = document.createElement("span"); cost.className = "hist-cost num";
+      cost.textContent = r.cost ? (r.cost + "원") : "";
+      var del = document.createElement("button");
+      del.type = "button"; del.className = "hist-del"; del.textContent = "×";
+      del.title = "이 기록 지우기";
+      del.setAttribute("aria-label", fmtWhen(r.at) + " 기록 지우기");
+      del.onclick = function(e){
+        e.stopPropagation();
+        histDel(r.id).then(loadHist)["catch"](function(){ toast("지우지 못했어요"); });
+      };
+      top.appendChild(when); top.appendChild(tag); top.appendChild(cost); top.appendChild(del);
+      d.appendChild(top);
+
+      if (r.photos && r.photos.length){
+        var strip = document.createElement("div"); strip.className = "hist-thumbs";
+        r.photos.forEach(function(bl, i){
+          var u; try{ u = URL.createObjectURL(bl); }catch(e){ return; }
+          histUrls.push(u);
+          var im = document.createElement("img");
+          im.src = u; im.alt = "기록 사진 " + (i+1); im.title = "눌러서 크게 보기";
+          im.onclick = function(e){ e.stopPropagation(); showBig(u, "기록 사진 " + (i+1)); };
+          strip.appendChild(im);
+        });
+        d.appendChild(strip);
+      }
+
+      var peek = document.createElement("p"); peek.className = "hist-peek";
+      peek.textContent = (r.messages[0] && r.messages[0].text) || r.read || "";
+      d.appendChild(peek);
+
+      var open = document.createElement("button");
+      open.type = "button"; open.className = "ghost hist-open";
+      open.textContent = "펼쳐 보기";
+      d.appendChild(open);
+
+      var bodyWrap = document.createElement("div");
+      bodyWrap.className = "hist-body"; bodyWrap.hidden = true;
+      d.appendChild(bodyWrap);
+
+      var built = false;
+      open.onclick = function(){
+        if (!built){ buildHistBody(bodyWrap, r); built = true; }
+        bodyWrap.hidden = !bodyWrap.hidden;
+        peek.hidden = !bodyWrap.hidden;
+        open.textContent = bodyWrap.hidden ? "펼쳐 보기" : "접기";
+      };
+
+      el.histList.appendChild(d);
+    });
+  }
+
+  function buildHistBody(wrap, r){
+    if (r.quote){
+      var q = document.createElement("div"); q.className = "hist-quote"; q.textContent = r.quote;
+      wrap.appendChild(q);
+    }
+    if (r.points && r.points.length){
+      var pw = document.createElement("div"); pw.className = "hist-pts";
+      r.points.forEach(function(t){
+        var c = document.createElement("span"); c.className = "hist-pt"; c.textContent = t;
+        pw.appendChild(c);
+      });
+      wrap.appendChild(pw);
+    }
+    r.messages.forEach(function(m, i){
+      wrap.appendChild(card(m, false, function(txt){
+        r.messages[i].text = txt;
+        histPut(r)["catch"](function(){});
+      }));
+    });
+    if (r.photos && r.photos.length){
+      var again = document.createElement("button");
+      again.type = "button"; again.className = "ghost";
+      again.textContent = "이 사진으로 다시 만들기";
+      again.onclick = function(){ reuseRun(r); };
+      wrap.appendChild(again);
+    }
+  }
+
+  /* 기록의 사진을 작업칸으로 되돌려 놓는다 */
+  function reuseRun(r){
+    shots.forEach(function(x){ try{ URL.revokeObjectURL(x.url); }catch(e){} });
+    shots = [];
+    (r.photos || []).forEach(function(bl, i){
+      var f;
+      try{ f = new File([bl], "기록-" + (i+1) + ".jpg", { type:"image/jpeg" }); }
+      catch(e){ f = bl; }
+      shots.push({ file:f, url:URL.createObjectURL(bl) });
+    });
+    if (r.mode !== mode){ mode = r.mode; set("mode", mode); applyMode(); }
+    targetLen = r.len || MODES[mode].defaultLen; set("len_"+mode, String(targetLen)); drawChips();
+    drawFilm();
+    if (r.quote){
+      quote = { full:r.quote, points:(r.points||[]).map(function(t){ return { text:t, on:true }; }) };
+      drawQuote();
+    }
+    el.histBox.open = false;
+    toast("작업칸에 올려뒀어요");
+    try{ el.histPanel.scrollIntoView({behavior:"smooth", block:"start"}); }catch(e){}
+  }
+
+  el.histFind.addEventListener("input", drawHist);
+  el.histClear.onclick = function(){
+    if (!histCache.length) return;
+    histWipe().then(loadHist).then(function(){ toast("기록을 모두 지웠어요"); })
+      ["catch"](function(){ toast("지우지 못했어요"); });
+  };
 
   /* ================= 상태 ================= */
   function setNotice(node){ el.notice.textContent=""; if (node) el.notice.appendChild(node); }
@@ -1307,7 +1604,7 @@ if ("serviceWorker" in navigator) {
 
     apiCall(shots.map(function(s){ return s.file; }), buildPrompt(), SAVE_TOOL, ctl.signal, maxTokensFor(targetLen)).then(function(data){
       if (!data || !data.messages || !data.messages.length) throw new Error("문자 내용이 비어 있습니다. 다시 시도해 주세요.");
-      setNotice(null); showResults(data); saveAll();
+      setNotice(null); showResults(data); saveAll(); saveRun(data);
     })["catch"](function(e){
       if (e && e.name === "AbortError"){ setNotice(null); return; }
       var f = friendly(e);
@@ -1407,6 +1704,7 @@ if ("serviceWorker" in navigator) {
     var d = new Date(); el.tick.textContent = (d.getMonth()+1) + "월 " + d.getDate() + "일";
 
     applyMode();
+    loadHist();
   })();
 })();
 </script>
