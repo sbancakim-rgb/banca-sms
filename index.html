@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>방카 문자 생성기</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0F5E8C" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0D1217" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="방카문자">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{
+  --bg:#EEF1F3; --surface:#FFFFFF; --surface-2:#F7F9FA; --surface-3:#EAEFF2;
+  --line:#D6DEE4; --line-soft:#E6ECF0;
+  --ink:#111820; --ink-2:#39454F; --muted:#63727E;
+  --accent:#0F5E8C; --accent-ink:#FFFFFF; --accent-wash:#DFECF5; --accent-line:#A9CBE0;
+  --good:#0B7355; --warn:#9A5B08; --bad:#A93A31;
+  --shadow-sm:0 1px 2px rgba(17,24,32,.07);
+  --shadow-md:0 2px 4px rgba(17,24,32,.06),0 10px 24px rgba(17,24,32,.08);
+  --r:14px; --r-sm:10px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1217; --surface:#151C23; --surface-2:#1B242C; --surface-3:#222D36;
+    --line:#2B3841; --line-soft:#222D36;
+    --ink:#E6ECF1; --ink-2:#C2CDD6; --muted:#8B9AA6;
+    --accent:#63B2E2; --accent-ink:#06202E; --accent-wash:#12303F; --accent-line:#2A5771;
+    --good:#41C69C; --warn:#DFA855; --bad:#EE8579;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.45);
+    --shadow-md:0 2px 4px rgba(0,0,0,.4),0 10px 24px rgba(0,0,0,.4);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+    --bg:#0D1217; --surface:#151C23; --surface-2:#1B242C; --surface-3:#222D36;
+    --line:#2B3841; --line-soft:#222D36;
+    --ink:#E6ECF1; --ink-2:#C2CDD6; --muted:#8B9AA6;
+    --accent:#63B2E2; --accent-ink:#06202E; --accent-wash:#12303F; --accent-line:#2A5771;
+    --good:#41C69C; --warn:#DFA855; --bad:#EE8579;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.45);
+    --shadow-md:0 2px 4px rgba(0,0,0,.4),0 10px 24px rgba(0,0,0,.4);
+    color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+html{padding:env(safe-area-inset-top,0px) 0 0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  font-size:15px; line-height:1.65; -webkit-text-size-adjust:100%;
+  -webkit-tap-highlight-color:transparent; overscroll-behavior-y:contain;
+}
+img{max-width:100%}
+[hidden]{display:none!important}
+.num{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+.appbar{
+  position:sticky; top:0; z-index:20;
+  background:color-mix(in srgb,var(--bg) 88%,transparent);
+  -webkit-backdrop-filter:saturate(180%) blur(12px); backdrop-filter:saturate(180%) blur(12px);
+  border-bottom:1px solid var(--line-soft);
+  display:flex; align-items:center; gap:8px; padding:11px 16px;
+}
+.appbar h1{font-size:16px;font-weight:700;margin:0;letter-spacing:-.01em;flex:1}
+.appbar .tick{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.06em}
+.main{max-width:620px;margin:0 auto;padding-block:16px 140px;padding-inline:16px;display:flex;flex-direction:column;gap:14px}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow-sm);padding:16px}
+.ph{display:flex;align-items:baseline;gap:8px;margin:0 0 12px}
+.ph h2{font-size:13px;font-weight:700;margin:0;letter-spacing:.02em}
+.ph span{font-size:12px;color:var(--muted)}
+
+label.lab{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:0 0 6px}
+input[type=text],input[type=password],textarea,select{
+  width:100%; font:inherit; font-size:16px; color:var(--ink);
+  background:var(--surface-2); border:1px solid var(--line); border-radius:var(--r-sm);
+  padding:11px 12px; outline:none; transition:border-color .15s,box-shadow .15s;
+}
+textarea{resize:vertical;min-height:72px;line-height:1.6}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:.75}
+.stack{display:flex;flex-direction:column;gap:12px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:460px){.two{grid-template-columns:1fr}}
+
+button{font:inherit;cursor:pointer;border-radius:var(--r-sm);border:1px solid var(--line);
+  background:var(--surface-2);color:var(--ink);padding:10px 14px;min-height:44px;transition:.15s}
+button:hover{border-color:var(--accent)}
+button:active{transform:translateY(1px)}
+button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ghost{min-height:38px;padding:7px 12px;font-size:13px;background:transparent}
+.icon-btn{min-height:36px;width:36px;padding:0;display:grid;place-items:center;background:transparent;border-color:transparent;color:var(--muted);font-size:15px}
+.icon-btn:hover{border-color:var(--line);color:var(--ink)}
+
+.shots{display:flex;gap:10px}
+.shot{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  min-height:84px;border:1.5px dashed var(--accent-line);border-radius:var(--r-sm);
+  background:var(--accent-wash);color:var(--accent);font-weight:600;font-size:14px}
+.shot small{font-weight:400;font-size:11.5px;color:var(--muted)}
+.shot.drag{background:var(--accent);color:var(--accent-ink);border-style:solid}
+.shot.drag small{color:var(--accent-ink);opacity:.85}
+.film{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:8px;margin-top:11px}
+.film:empty{display:none}
+.frame{position:relative;aspect-ratio:1;max-width:100%;border-radius:var(--r-sm);overflow:hidden;border:1px solid var(--line);background:var(--surface-3)}
+.frame img{width:100%;height:100%;object-fit:cover;display:block}
+.frame button{position:absolute;top:4px;right:4px;width:26px;height:26px;min-height:0;padding:0;
+  border-radius:8px;background:rgba(8,12,16,.68);border:none;color:#fff;font-size:15px;line-height:1}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:8px 14px;min-height:40px;border-radius:999px;font-size:13.5px;font-weight:600;
+  background:var(--surface-2);border:1px solid var(--line);color:var(--ink-2)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chip small{display:block;font-size:10.5px;font-weight:400;opacity:.75;line-height:1.2}
+
+.switch{display:flex;align-items:center;gap:11px;cursor:pointer}
+.switch input{position:absolute;opacity:0;width:0;height:0}
+.track{flex:none;width:46px;height:28px;border-radius:999px;background:var(--surface-3);border:1px solid var(--line);position:relative;transition:.18s}
+.track::after{content:"";position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:var(--surface);box-shadow:var(--shadow-sm);transition:.18s}
+.switch input:checked + .track{background:var(--accent);border-color:var(--accent)}
+.switch input:checked + .track::after{transform:translateX(18px)}
+.switch input:focus-visible + .track{outline:2px solid var(--accent);outline-offset:2px}
+.switch .txt{font-size:14px;font-weight:500}
+
+details.more > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:7px;
+  font-size:13px;font-weight:600;color:var(--muted);min-height:36px}
+details.more > summary::-webkit-details-marker{display:none}
+details.more > summary::before{content:"\25B8";transition:transform .15s;display:inline-block;font-size:11px}
+details.more[open] > summary::before{transform:rotate(90deg)}
+.tone{border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface-2);padding:11px;margin-top:9px}
+.tone .tn{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.tone .tn input{font-weight:600;font-size:14px}
+.tone textarea{min-height:52px;font-size:14px}
+.ord{flex:none;width:22px;height:22px;border-radius:7px;display:grid;place-items:center;
+  background:var(--accent-wash);color:var(--accent);font-size:11px;font-weight:700}
+
+#results{display:flex;flex-direction:column;gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow-md);overflow:hidden}
+.card.sample{box-shadow:none;border-style:dashed;opacity:.9}
+.card-top{display:flex;align-items:center;gap:9px;padding:11px 14px;background:var(--surface-2);border-bottom:1px solid var(--line-soft)}
+.card-top .name{font-size:13.5px;font-weight:700;flex:1;letter-spacing:-.01em}
+.tag{font-size:10.5px;font-weight:700;letter-spacing:.06em;padding:3px 8px;border-radius:6px;background:var(--surface-3);color:var(--muted)}
+.body{padding:14px}
+.text{white-space:pre-wrap;word-break:break-word;font-size:15.5px;line-height:1.8;
+  border:1px solid transparent;border-radius:8px;padding:3px;min-height:1em}
+.text:focus{outline:none;border-color:var(--accent);background:var(--surface-2)}
+.gauge{display:flex;align-items:center;gap:9px;margin-top:12px;font-size:12px;color:var(--muted)}
+.bar{flex:1;height:5px;border-radius:99px;background:var(--surface-3);overflow:hidden;min-width:40px}
+.bar i{display:block;height:100%;border-radius:99px;background:var(--accent);transition:width .2s}
+.kind{font-weight:700;font-size:11px;letter-spacing:.04em;padding:2px 7px;border-radius:5px}
+.kind.sms{color:var(--good);background:color-mix(in srgb,var(--good) 14%,transparent)}
+.kind.lms{color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent)}
+.kind.mms{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.acts{display:flex;gap:8px;margin-top:12px}
+.acts .copy{flex:1;background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.acts .copy:hover{filter:brightness(1.08)}
+.acts .send{flex:none;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;
+  padding:10px 15px;min-height:44px;border-radius:var(--r-sm);border:1px solid var(--line);
+  background:var(--surface-2);color:var(--ink);font-size:14px;font-weight:600}
+
+.readout{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:var(--r-sm);padding:12px 14px;font-size:13.5px;color:var(--ink-2);line-height:1.6}
+.readout b{display:block;font-size:11px;letter-spacing:.06em;color:var(--muted);margin-bottom:3px;font-weight:700}
+
+.status{display:flex;align-items:center;gap:11px;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r);padding:15px;box-shadow:var(--shadow-sm)}
+.spin{flex:none;width:19px;height:19px;border:2.5px solid var(--accent-wash);border-top-color:var(--accent);
+  border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation-duration:2.4s}*{transition-duration:.01ms!important}}
+.status .st{flex:1;font-size:14px}
+.status .st em{display:block;font-style:normal;font-size:12px;color:var(--muted)}
+.alert{background:color-mix(in srgb,var(--bad) 9%,var(--surface));border:1px solid color-mix(in srgb,var(--bad) 34%,var(--line));
+  border-radius:var(--r);padding:13px 15px;font-size:13.5px;color:var(--ink);line-height:1.6}
+.alert b{color:var(--bad)}
+.hint{background:var(--accent-wash);border:1px solid var(--accent-line);border-radius:var(--r);
+  padding:13px 15px;font-size:13.5px;line-height:1.6;color:var(--ink-2)}
+.hint b{color:var(--accent)}
+
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:30;
+  background:color-mix(in srgb,var(--bg) 92%,transparent);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  border-top:1px solid var(--line);
+  padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px))}
+.dock-in{max-width:620px;margin:0 auto;display:flex;gap:10px;align-items:center}
+.go{flex:1;min-height:52px;font-size:16px;font-weight:700;letter-spacing:-.01em;
+  background:var(--accent);border-color:var(--accent);color:var(--accent-ink);box-shadow:var(--shadow-md)}
+.go:hover{filter:brightness(1.08)}
+.go:disabled{background:var(--surface-3);border-color:var(--line);color:var(--muted);box-shadow:none}
+
+.foot{font-size:12px;color:var(--muted);line-height:1.65;border-top:1px solid var(--line-soft);padding-top:14px}
+.foot b{color:var(--ink-2)}
+.toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom,0px));transform:translate(-50%,12px);
+  background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-size:13.5px;font-weight:600;
+  opacity:0;pointer-events:none;transition:.2s;z-index:40;max-width:86vw;text-align:center;box-shadow:var(--shadow-md)}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+
+<div class="appbar">
+  <h1>방카 문자 생성기</h1>
+  <span class="tick" id="tick"></span>
+  <button class="icon-btn" id="installBtn" title="앱으로 설치" aria-label="앱으로 설치" hidden>⤓</button>
+  <button class="icon-btn" id="themeBtn" title="밝기 전환" aria-label="밝기 전환">◐</button>
+</div>
+
+<div class="main">
+
+  <!-- 연결 -->
+  <section class="panel">
+    <details class="more" id="keyBox">
+      <summary id="keySummary">연결 설정</summary>
+      <div class="stack" style="margin-top:12px">
+        <div>
+          <label class="lab" for="apiKey">Claude API 키</label>
+          <input type="password" id="apiKey" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
+        </div>
+        <div>
+          <label class="lab" for="model">모델</label>
+          <select id="model">
+            <option value="claude-sonnet-5">Sonnet 5 — 빠르고 저렴 (권장)</option>
+            <option value="claude-opus-5">Opus 5 — 가장 정교함</option>
+            <option value="claude-haiku-4-5-20251001">Haiku 4.5 — 가장 빠름</option>
+          </select>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin:0;line-height:1.6">
+          키는 이 기기에만 저장되고 서버로 보내지 않습니다.
+          발급: console.anthropic.com → API Keys → Create Key, 그리고 Billing에서 크레딧 충전.
+        </p>
+      </div>
+    </details>
+  </section>
+
+  <!-- 자료 -->
+  <section class="panel">
+    <div class="ph"><h2>자료 사진</h2><span id="shotCount">시책표 · 안내문 · 실적표</span></div>
+    <div class="shots">
+      <button class="shot" id="camBtn">촬영하기<small>카메라로 바로</small></button>
+      <button class="shot" id="albBtn">사진 고르기<small>앨범 · 캡처</small></button>
+    </div>
+    <input type="file" id="camIn" accept="image/*" capture="environment" hidden>
+    <input type="file" id="albIn" accept="image/*" multiple hidden>
+    <div class="film" id="film"></div>
+  </section>
+
+  <!-- 문자 정보 -->
+  <section class="panel">
+    <div class="ph"><h2>문자 정보</h2><span>한 번 넣으면 저장됩니다</span></div>
+    <div class="stack">
+      <div class="two">
+        <div>
+          <label class="lab" for="sender">보내는 사람 (서명)</label>
+          <input type="text" id="sender" placeholder="OO생명 방카채널 김OO" autocomplete="off">
+        </div>
+        <div>
+          <label class="lab" for="target">받는 분</label>
+          <input type="text" id="target" placeholder="OO은행 영업점 팀장님" autocomplete="off">
+        </div>
+      </div>
+      <div>
+        <label class="lab">문자 길이</label>
+        <div class="chips" id="lenChips" role="group" aria-label="문자 길이">
+          <button class="chip" data-len="60" aria-pressed="false">짧게<small>60자 · 단문</small></button>
+          <button class="chip" data-len="100" aria-pressed="true">보통<small>100자</small></button>
+          <button class="chip" data-len="150" aria-pressed="false">길게<small>150자</small></button>
+          <button class="chip" data-len="220" aria-pressed="false">상세<small>220자</small></button>
+        </div>
+      </div>
+      <div>
+        <label class="lab" for="extra">강조할 내용 <span style="font-weight:400">(선택)</span></label>
+        <textarea id="extra" placeholder="예) 금요일 마감 강조 / 지난달 목표 달성 감사 인사 / 상품명은 정식 명칭 그대로"></textarea>
+      </div>
+      <label class="switch" for="adFlag">
+        <input type="checkbox" id="adFlag">
+        <span class="track"></span>
+        <span class="txt">광고성 문자 — <b>(광고)</b> 표기와 무료수신거부 문구 넣기</span>
+      </label>
+      <div id="adWrap" hidden>
+        <input type="text" id="adNum" placeholder="무료수신거부 번호 (예: 080-000-0000)" autocomplete="off">
+      </div>
+    </div>
+  </section>
+
+  <!-- 톤 -->
+  <section class="panel">
+    <details class="more">
+      <summary>문자 3종의 톤 바꾸기</summary>
+      <div id="tones"></div>
+      <button class="ghost" id="toneReset" style="margin-top:10px">기본값으로 되돌리기</button>
+    </details>
+  </section>
+
+  <div id="notice"></div>
+  <div id="results"></div>
+
+  <div class="hint" id="installTip" hidden>
+    <b>홈 화면에 추가하기</b><br>
+    <span id="installHow"></span>
+  </div>
+
+  <p class="foot">
+    생성된 문구는 <b>초안</b>입니다. 상품명 · 수수료율 · 기간 · 날짜는 원본 자료와 대조한 뒤 발송하시고,
+    보험 · 금융상품 안내 문자는 소속사 <b>준법감시(광고심의)</b> 기준을 따라 주세요.
+    고객 실명 · 주민번호 · 계좌번호가 찍힌 사진은 올리지 마세요.
+  </p>
+</div>
+
+<div class="dock">
+  <div class="dock-in">
+    <button class="go" id="go">문자 3개 만들기</button>
+    <button class="ghost" id="stop" hidden style="min-height:52px;padding:0 18px">중지</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+if ("serviceWorker" in navigator) {
+  addEventListener("load", function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); });
+}
+</script>
+<script>
+(function(){
+  "use strict";
+
+  var DEFAULT_TONES = [
+    {name:"정중한 공지형", desc:"격식을 갖춘 정보 전달 중심. 핵심을 담백하고 명확하게. 과장 없이 신뢰감 있게."},
+    {name:"친근한 안부형", desc:"관계 유지에 초점. 짧은 안부 인사로 시작해 부드럽게 본론으로. 따뜻하지만 가볍지 않게."},
+    {name:"실적 독려형", desc:"행동을 이끄는 데 초점. 마감일·혜택·기회를 앞세우고 마지막에 명확한 요청 한 줄. 압박보다 응원하는 어조로."}
+  ];
+  var EXAMPLE = {
+    tone:"정중한 공지형",
+    text:"팀장님, 안녕하십니까. 9월 시책 안내드립니다. 월납 30만원 이상 계약 건에 기본 수수료가 적용되며, 추가 시책은 9월 30일까지 지급됩니다. 자세한 내용은 자료 참고 부탁드립니다."
+  };
+  var MAXSHOTS = 5, MAXDIM = 1568;
+
+  var $ = function(s){ return document.querySelector(s); };
+  var el = {
+    tick:$("#tick"), theme:$("#themeBtn"), install:$("#installBtn"),
+    keyBox:$("#keyBox"), keySummary:$("#keySummary"), key:$("#apiKey"), model:$("#model"),
+    cam:$("#camBtn"), alb:$("#albBtn"), camIn:$("#camIn"), albIn:$("#albIn"),
+    film:$("#film"), shotCount:$("#shotCount"),
+    sender:$("#sender"), target:$("#target"), lenChips:$("#lenChips"), extra:$("#extra"),
+    adFlag:$("#adFlag"), adWrap:$("#adWrap"), adNum:$("#adNum"),
+    tones:$("#tones"), toneReset:$("#toneReset"),
+    notice:$("#notice"), results:$("#results"), go:$("#go"), stop:$("#stop"),
+    toast:$("#toast"), tip:$("#installTip"), how:$("#installHow")
+  };
+
+  var mem = {};
+  function get(k,d){ try{ var v=localStorage.getItem("banca_"+k); return v===null?d:v; }catch(e){ return (k in mem)?mem[k]:d; } }
+  function set(k,v){ mem[k]=v; try{ localStorage.setItem("banca_"+k,v); }catch(e){} }
+
+  /* ---------- 사진 ---------- */
+  var shots = [];   // {file, url}
+
+  function addFiles(list){
+    var files = Array.prototype.slice.call(list || []), added = 0;
+    for (var i=0;i<files.length;i++){
+      var f = files[i];
+      if (!f || !f.type || f.type.indexOf("image/") !== 0) continue;
+      if (shots.length >= MAXSHOTS){ toast("사진은 최대 " + MAXSHOTS + "장까지예요"); break; }
+      shots.push({ file:f, url:URL.createObjectURL(f) });
+      added++;
+    }
+    if (added) drawFilm();
+  }
+  function drawFilm(){
+    el.film.textContent = "";
+    shots.forEach(function(s,i){
+      var d = document.createElement("div"); d.className = "frame";
+      var im = document.createElement("img"); im.src = s.url; im.alt = "올린 자료 " + (i+1);
+      var b = document.createElement("button"); b.type="button"; b.textContent="×";
+      b.setAttribute("aria-label",(i+1)+"번째 사진 빼기");
+      b.onclick = function(){ URL.revokeObjectURL(s.url); shots.splice(i,1); drawFilm(); };
+      d.appendChild(im); d.appendChild(b); el.film.appendChild(d);
+    });
+    el.shotCount.textContent = shots.length ? (shots.length + "장 · 최대 " + MAXSHOTS + "장") : "시책표 · 안내문 · 실적표";
+    syncGo();
+  }
+  el.cam.onclick = function(){ el.camIn.click(); };
+  el.alb.onclick = function(){ el.albIn.click(); };
+  el.camIn.onchange = function(e){ addFiles(e.target.files); e.target.value=""; };
+  el.albIn.onchange = function(e){ addFiles(e.target.files); e.target.value=""; };
+  ["dragenter","dragover"].forEach(function(t){ el.alb.addEventListener(t,function(e){ e.preventDefault(); el.alb.classList.add("drag"); }); });
+  ["dragleave","drop"].forEach(function(t){ el.alb.addEventListener(t,function(e){ e.preventDefault(); el.alb.classList.remove("drag"); }); });
+  el.alb.addEventListener("drop", function(e){ if (e.dataTransfer) addFiles(e.dataTransfer.files); });
+  document.addEventListener("paste", function(e){
+    if (e.clipboardData && e.clipboardData.files && e.clipboardData.files.length) addFiles(e.clipboardData.files);
+  });
+
+  /* 휴대폰 사진은 4000px/8MB가 흔하다. 보내기 전에 줄여야 느려지거나 거부되지 않는다. */
+  function prepImage(file){
+    return new Promise(function(resolve, reject){
+      var img = new Image(), url = URL.createObjectURL(file);
+      img.onload = function(){
+        try{
+          var w = img.naturalWidth, h = img.naturalHeight;
+          var k = Math.min(1, MAXDIM / Math.max(w, h));
+          var cw = Math.max(1, Math.round(w*k)), ch = Math.max(1, Math.round(h*k));
+          var c = document.createElement("canvas"); c.width = cw; c.height = ch;
+          c.getContext("2d").drawImage(img, 0, 0, cw, ch);
+          var data = c.toDataURL("image/jpeg", 0.85);
+          URL.revokeObjectURL(url);
+          resolve({ type:"image", source:{ type:"base64", media_type:"image/jpeg", data:data.split(",")[1] } });
+        }catch(err){ URL.revokeObjectURL(url); reject(err); }
+      };
+      img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error("이미지를 읽지 못했습니다: " + (file.name||""))); };
+      img.src = url;
+    });
+  }
+
+  /* ---------- 길이 ---------- */
+  var targetLen = parseInt(get("len","100"),10) || 100;
+  function drawChips(){
+    var cs = el.lenChips.querySelectorAll(".chip");
+    for (var i=0;i<cs.length;i++) cs[i].setAttribute("aria-pressed", cs[i].dataset.len == targetLen ? "true":"false");
+  }
+  el.lenChips.addEventListener("click", function(e){
+    var c = e.target.closest(".chip"); if (!c) return;
+    targetLen = parseInt(c.dataset.len,10); set("len", String(targetLen)); drawChips();
+  });
+
+  /* ---------- 톤 ---------- */
+  function drawTones(list){
+    el.tones.textContent = "";
+    list.forEach(function(t,i){
+      var d = document.createElement("div"); d.className="tone";
+      var head = document.createElement("div"); head.className="tn";
+      var ord = document.createElement("span"); ord.className="ord"; ord.textContent=String(i+1);
+      var nm = document.createElement("input"); nm.type="text"; nm.className="t-name"; nm.value=t.name;
+      nm.setAttribute("aria-label",(i+1)+"번 톤 이름");
+      head.appendChild(ord); head.appendChild(nm);
+      var ta = document.createElement("textarea"); ta.className="t-desc"; ta.value=t.desc;
+      ta.setAttribute("aria-label",(i+1)+"번 톤 설명");
+      d.appendChild(head); d.appendChild(ta); el.tones.appendChild(d);
+    });
+  }
+  function readTones(){
+    return Array.prototype.map.call(el.tones.querySelectorAll(".tone"), function(d){
+      return { name:d.querySelector(".t-name").value.trim() || "기본", desc:d.querySelector(".t-desc").value.trim() };
+    });
+  }
+  el.tones.addEventListener("input", function(){ set("tones", JSON.stringify(readTones())); });
+  el.toneReset.onclick = function(){ drawTones(DEFAULT_TONES); set("tones", JSON.stringify(DEFAULT_TONES)); toast("기본값으로 되돌렸어요"); };
+
+  /* ---------- 글자·바이트 ---------- */
+  function bytes(s){ var n=0; for (var i=0;i<s.length;i++) n += s.charCodeAt(i)>127?2:1; return n; }
+  function kindOf(b){ if (b<=90) return ["SMS","sms"]; if (b<=2000) return ["LMS","lms"]; return ["분할발송","mms"]; }
+
+  /* ---------- 프롬프트 ---------- */
+  function buildPrompt(){
+    var tones = readTones();
+    var target = el.target.value.trim() || "은행 영업점 팀장님";
+    var sender = el.sender.value.trim();
+    var extra = el.extra.value.trim();
+    var ad = el.adFlag.checked, adNum = el.adNum.value.trim();
+    var p = [];
+    p.push("함께 보내는 사진은 은행 방카슈랑스/금융상품 영업 자료입니다. 사진에 적힌 내용을 정확히 읽고, 그 내용을 바탕으로 " + target + "께 보낼 문자 메시지 초안 3개를 작성하세요.");
+    p.push("");
+    p.push("[받는 사람]");
+    p.push(target + " — 바쁜 은행 영업점 관리자입니다. 장황한 설명보다 핵심이 먼저 보여야 합니다.");
+    p.push("");
+    p.push("[공통 규칙]");
+    p.push("1. 사진에 실제로 적힌 사실만 쓰세요. 상품명, 금액, 이율, 수수료율, 기간, 날짜, 조건은 사진에 있는 그대로 옮기고 절대 지어내지 마세요.");
+    p.push("2. 사진에서 확인되지 않는 숫자나 조건은 아예 쓰지 마세요. 추측 금지.");
+    p.push("3. 분량은 공백 포함 한글 " + targetLen + "자 내외(±20자)로 맞추세요.");
+    p.push("4. 자연스러운 한국어 존댓말. 은행 실무 표현을 쓰되 과한 한자어와 번역투는 피하세요.");
+    p.push("5. 이모지는 쓰지 마세요. 줄바꿈은 읽기 쉬운 곳에만 최소한으로 쓰세요.");
+    p.push("6. '최고', '무조건', '100% 보장' 같은 단정적·과장 표현은 금지입니다. 원금손실 가능 상품을 확정 수익처럼 표현하지 마세요.");
+    p.push("7. 고객 실명·주민번호·계좌번호 등 개인정보는 넣지 마세요.");
+    var n = 8;
+    if (sender){ p.push(n + ". 문자 끝에 발신자를 '" + sender + "' 로 표기하세요."); n++; }
+    if (ad){ p.push(n + ". 문자 맨 앞에 '(광고)'를 붙이고, 맨 끝에 무료수신거부 안내를 넣으세요" + (adNum ? " (수신거부: " + adNum + ")." : " (번호는 '무료수신거부 [번호]' 형태로 두세요).")); }
+    p.push("");
+    p.push("[3개의 톤 — 서로 확실히 다르게]");
+    tones.forEach(function(t,i){ p.push((i+1)+") "+t.name+": "+(t.desc||"자연스럽게")); });
+    if (extra){ p.push(""); p.push("[반드시 반영할 내용]"); p.push(extra); }
+    p.push("");
+    p.push("[출력 형식]");
+    p.push("다른 말 없이 아래 JSON 하나만 출력하세요. 코드블록 표시도 붙이지 마세요.");
+    p.push('{"read":"사진에서 읽어낸 핵심 내용 2~4문장","messages":[{"tone":"톤 이름","text":"문자 전문"},{"tone":"...","text":"..."},{"tone":"...","text":"..."}]}');
+    p.push("text 에는 실제로 발송할 문자 본문만 넣고 제목이나 설명은 넣지 마세요.");
+    return p.join("\n");
+  }
+
+  /* ---------- API ---------- */
+  function callClaude(signal){
+    var key = el.key.value.trim();
+    return Promise.all(shots.map(function(s){ return prepImage(s.file); })).then(function(imgs){
+      var content = imgs.slice();
+      content.push({ type:"text", text: buildPrompt() });
+      return fetch("https://api.anthropic.com/v1/messages", {
+        method:"POST",
+        signal: signal,
+        headers:{
+          "content-type":"application/json",
+          "x-api-key": key,
+          "anthropic-version":"2023-06-01",
+          "anthropic-dangerous-direct-browser-access":"true"
+        },
+        body: JSON.stringify({
+          model: el.model.value,
+          max_tokens: 2000,
+          system:"당신은 국내 보험사 방카슈랑스 채널의 베테랑 도매영업(홀세일러) 담당자입니다. 은행 영업점 팀장에게 보내는 실무 문자를 씁니다. 사실 관계에 엄격하고, 자료에 없는 숫자는 절대 만들어내지 않습니다. 항상 요청받은 JSON 형식만 출력합니다.",
+          messages:[{ role:"user", content: content }]
+        })
+      });
+    }).then(function(res){
+      return res.text().then(function(raw){
+        if (!res.ok){
+          var msg = raw;
+          try{ var j = JSON.parse(raw); if (j.error && j.error.message) msg = j.error.message; }catch(e){}
+          var e2 = new Error(msg); e2.status = res.status; throw e2;
+        }
+        var data = JSON.parse(raw);
+        var text = (data.content||[]).filter(function(b){ return b.type==="text"; })
+                     .map(function(b){ return b.text; }).join("\n").trim();
+        text = text.replace(/^```(?:json)?\s*/i,"").replace(/```\s*$/,"").trim();
+        try{ return JSON.parse(text); }
+        catch(e){
+          var a = text.indexOf("{"), b = text.lastIndexOf("}");
+          if (a === -1 || b === -1) { var e3 = new Error("응답을 해석하지 못했습니다."); e3.parse = true; throw e3; }
+          return JSON.parse(text.slice(a,b+1));
+        }
+      });
+    });
+  }
+
+  /* ---------- 결과 ---------- */
+  var isTouch = (function(){ try{ return window.matchMedia("(pointer:coarse)").matches; }catch(e){ return false; } })();
+
+  function card(m, isSample){
+    var box = document.createElement("div");
+    box.className = "card" + (isSample ? " sample" : "");
+    var top = document.createElement("div"); top.className="card-top";
+    var name = document.createElement("span"); name.className="name"; name.textContent = m.tone || "문자";
+    top.appendChild(name);
+    if (isSample){ var tg=document.createElement("span"); tg.className="tag"; tg.textContent="예시"; top.appendChild(tg); }
+    box.appendChild(top);
+
+    var body = document.createElement("div"); body.className="body";
+    var text = document.createElement("div"); text.className="text";
+    text.textContent = (m.text||"").trim();
+    if (!isSample){
+      text.contentEditable = "true"; text.spellcheck = false;
+      text.setAttribute("role","textbox");
+      text.setAttribute("aria-label",(m.tone||"문자")+" 본문 — 직접 고칠 수 있습니다");
+    }
+    body.appendChild(text);
+
+    var gauge = document.createElement("div"); gauge.className="gauge";
+    var cnt = document.createElement("span"); cnt.className="num";
+    var bar = document.createElement("span"); bar.className="bar";
+    var fill = document.createElement("i"); bar.appendChild(fill);
+    var kd = document.createElement("span"); kd.className="kind";
+    gauge.appendChild(cnt); gauge.appendChild(bar); gauge.appendChild(kd);
+    body.appendChild(gauge);
+
+    var sendLink = null;
+    function refresh(){
+      var t = text.innerText.replace(/ /g," ");
+      var b = bytes(t), k = kindOf(b);
+      cnt.textContent = t.length + "자 · " + b + "byte";
+      kd.textContent = k[0]; kd.className = "kind " + k[1];
+      fill.style.width = Math.min(100, Math.round(b / (b<=90?90:2000) * 100)) + "%";
+      if (sendLink) sendLink.href = "sms:?&body=" + encodeURIComponent(t);
+    }
+    if (!isSample){
+      var acts = document.createElement("div"); acts.className="acts";
+      var cp = document.createElement("button"); cp.className="copy"; cp.textContent="복사";
+      cp.onclick = function(){ doCopy(text, cp); };
+      acts.appendChild(cp);
+      if (isTouch){
+        sendLink = document.createElement("a");
+        sendLink.className="send"; sendLink.textContent="문자앱"; sendLink.rel="noopener";
+        acts.appendChild(sendLink);
+      }
+      body.appendChild(acts);
+      text.addEventListener("input", refresh);
+    }
+    refresh();
+    box.appendChild(body);
+    return box;
+  }
+
+  function doCopy(node, btn){
+    var t = node.innerText.replace(/ /g," ");
+    var done = function(){ btn.textContent="복사됨"; setTimeout(function(){ btn.textContent="복사"; },1500); };
+    var manual = function(){
+      try{
+        var r = document.createRange(); r.selectNodeContents(node);
+        var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      }catch(e){}
+      toast("글자를 길게 눌러 복사해 주세요");
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(done)["catch"](function(){ legacy(t) ? done() : manual(); });
+    } else { legacy(t) ? done() : manual(); }
+  }
+  function legacy(t){
+    try{
+      var ta = document.createElement("textarea");
+      ta.value = t; ta.setAttribute("readonly","");
+      ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+      document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0,t.length);
+      var ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    }catch(e){ return false; }
+  }
+
+  function showResults(data){
+    el.results.textContent = "";
+    if (data.read){
+      var r = document.createElement("div"); r.className="readout";
+      var b = document.createElement("b"); b.textContent="사진에서 읽은 내용";
+      r.appendChild(b); r.appendChild(document.createTextNode(String(data.read)));
+      el.results.appendChild(r);
+    }
+    (data.messages||[]).forEach(function(m){ el.results.appendChild(card(m,false)); });
+    try{ el.results.scrollIntoView({behavior:"smooth",block:"start"}); }catch(e){ el.results.scrollIntoView(); }
+  }
+
+  /* ---------- 상태 ---------- */
+  function setNotice(node){ el.notice.textContent=""; if (node) el.notice.appendChild(node); }
+  function alertBox(title,msg){
+    var d = document.createElement("div"); d.className="alert";
+    var b = document.createElement("b"); b.textContent=title;
+    d.appendChild(b); d.appendChild(document.createElement("br"));
+    d.appendChild(document.createTextNode(msg));
+    return d;
+  }
+  var toastT;
+  function toast(msg){
+    el.toast.textContent = msg; el.toast.classList.add("on");
+    clearTimeout(toastT); toastT = setTimeout(function(){ el.toast.classList.remove("on"); },2000);
+  }
+
+  /* ---------- 생성 ---------- */
+  var busy=false, ctl=null, timer=null;
+
+  function statusBox(){
+    var d = document.createElement("div"); d.className="status";
+    var sp = document.createElement("div"); sp.className="spin";
+    var st = document.createElement("div"); st.className="st";
+    st.appendChild(document.createTextNode("사진을 읽고 문구를 쓰는 중"));
+    var em = document.createElement("em"); em.textContent="보통 15~40초 걸립니다";
+    st.appendChild(em); d.appendChild(sp); d.appendChild(st); d._em = em;
+    return d;
+  }
+
+  function run(){
+    if (busy) return;
+    if (!el.key.value.trim()){ toast("API 키를 먼저 넣어 주세요"); el.keyBox.open = true; el.key.focus(); return; }
+    if (!shots.length){ toast("사진을 먼저 올려 주세요"); return; }
+
+    busy = true; ctl = new AbortController();
+    el.go.disabled = true; el.go.textContent = "만드는 중…"; el.stop.hidden = false;
+    var st = statusBox(); setNotice(st);
+    var t0 = Date.now();
+    timer = setInterval(function(){
+      st._em.textContent = Math.round((Date.now()-t0)/1000) + "초 경과 · 보통 15~40초 걸립니다";
+    }, 1000);
+
+    callClaude(ctl.signal).then(function(data){
+      if (!data || !data.messages || !data.messages.length) throw new Error("문자 내용이 비어 있습니다. 다시 시도해 주세요.");
+      setNotice(null); showResults(data); saveAll();
+    })["catch"](function(e){
+      if (e && e.name === "AbortError"){ setNotice(null); return; }
+      var m = String(e && e.message || e), title = "문제가 생겼습니다";
+      if (e && e.status === 401){ title="API 키가 올바르지 않습니다"; m="키 앞뒤에 공백이 붙지 않았는지 확인하시고, 콘솔에서 새로 발급해 보세요."; }
+      else if (e && e.status === 429){ title="요청이 몰렸거나 한도를 넘었습니다"; m="잠시 뒤 다시 시도해 주세요."; }
+      else if (e && e.status === 400 && /credit|balance/i.test(m)){ title="계정 잔액이 부족합니다"; m="console.anthropic.com → Billing 에서 크레딧을 충전해 주세요."; }
+      else if (e && e.parse){ title="결과를 정리하지 못했습니다"; m="한 번 더 눌러 주세요. 계속 그러면 강조할 내용을 짧게 줄여 보세요."; }
+      else if (/Failed to fetch|NetworkError|Load failed/i.test(m)){ title="연결하지 못했습니다"; m="인터넷 연결을 확인해 주세요. 회사 보안 프로그램이 막고 있을 수도 있습니다."; }
+      setNotice(alertBox(title, m));
+    })["finally"](function(){
+      busy = false; clearInterval(timer); el.stop.hidden = true; el.go.disabled = false; syncGo();
+    });
+  }
+  function syncGo(){
+    if (busy) return;
+    el.go.disabled = !shots.length;
+    if (!shots.length) el.go.textContent = "사진을 먼저 올려 주세요";
+    else el.go.textContent = el.results.querySelector(".card:not(.sample)") ? "다시 3개 뽑기" : "문자 3개 만들기";
+  }
+  el.go.onclick = run;
+  el.stop.onclick = function(){ if (ctl) ctl.abort(); };
+
+  /* ---------- 저장 ---------- */
+  function saveAll(){
+    set("key", el.key.value); set("model", el.model.value);
+    set("sender", el.sender.value); set("target", el.target.value);
+    set("extra", el.extra.value); set("ad", el.adFlag.checked?"1":"0");
+    set("adNum", el.adNum.value); set("tones", JSON.stringify(readTones()));
+    set("len", String(targetLen)); markKey();
+  }
+  function markKey(){
+    var has = !!el.key.value.trim();
+    el.keySummary.textContent = has ? "연결 설정 — 키 저장됨" : "연결 설정 — API 키를 넣어 주세요";
+  }
+  [el.key, el.model, el.sender, el.target, el.extra, el.adNum].forEach(function(x){ x.addEventListener("change", saveAll); });
+  el.key.addEventListener("input", markKey);
+  el.adFlag.addEventListener("change", function(){ el.adWrap.hidden = !el.adFlag.checked; saveAll(); });
+
+  /* ---------- 테마 ---------- */
+  el.theme.onclick = function(){
+    var cur = document.documentElement.getAttribute("data-theme"), dark = false;
+    try{ dark = window.matchMedia("(prefers-color-scheme: dark)").matches; }catch(e){}
+    var next = cur ? (cur==="dark"?"light":"dark") : (dark?"light":"dark");
+    document.documentElement.setAttribute("data-theme", next);
+    set("theme", next);
+  };
+
+  /* ---------- 설치 ---------- */
+  var deferred = null;
+  var standalone = (function(){
+    try{ return matchMedia("(display-mode: standalone)").matches || navigator.standalone === true; }catch(e){ return false; }
+  })();
+  addEventListener("beforeinstallprompt", function(e){
+    e.preventDefault(); deferred = e;
+    if (!standalone) el.install.hidden = false;
+  });
+  el.install.onclick = function(){
+    if (!deferred) return;
+    deferred.prompt(); deferred = null; el.install.hidden = true;
+  };
+  addEventListener("appinstalled", function(){ el.install.hidden = true; el.tip.hidden = true; });
+  (function installHint(){
+    if (standalone) return;
+    var ua = navigator.userAgent;
+    var iOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+    el.how.textContent = iOS
+      ? "사파리 아래쪽 공유 버튼을 누르고 ‘홈 화면에 추가’를 고르세요. 그 뒤로는 아이콘만 누르면 주소창 없이 전체화면으로 열립니다."
+      : "크롬 오른쪽 위 메뉴(⋮)에서 ‘앱 설치’ 또는 ‘홈 화면에 추가’를 고르세요. 그 뒤로는 아이콘만 누르면 주소창 없이 전체화면으로 열립니다.";
+    el.tip.hidden = false;
+  })();
+
+  /* ---------- 시작 ---------- */
+  (function init(){
+    el.key.value = get("key","");
+    el.model.value = get("model","claude-sonnet-5") || "claude-sonnet-5";
+    el.sender.value = get("sender","");
+    el.target.value = get("target","");
+    el.extra.value = get("extra","");
+    el.adNum.value = get("adNum","");
+    el.adFlag.checked = get("ad","0") === "1";
+    el.adWrap.hidden = !el.adFlag.checked;
+
+    var tones = DEFAULT_TONES;
+    try{ var raw = get("tones",null); if (raw){ var p = JSON.parse(raw); if (p && p.length===3) tones = p; } }catch(e){}
+    drawTones(tones);
+    drawChips(); markKey();
+    if (!el.key.value.trim()) el.keyBox.open = true;
+
+    var th = get("theme",""); if (th) document.documentElement.setAttribute("data-theme", th);
+    var d = new Date(); el.tick.textContent = (d.getMonth()+1) + "월 " + d.getDate() + "일";
+
+    el.results.appendChild(card(EXAMPLE, true));
+    drawFilm();
+  })();
+})();
+</script>
+</body>
+</html>
