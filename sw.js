@@ -1,7 +1,7 @@
 /* Service worker — required for Chrome's install prompt.
    Bump CACHE whenever you ship changed files, or returning viewers keep
    the old shell: a cache-first worker will happily serve last week's app. */
-const CACHE = "app-v2";
+const CACHE = "app-v3";
 const SHELL = [
   "./",
   "./index.html",
