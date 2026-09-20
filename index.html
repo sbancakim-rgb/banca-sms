@@ -158,7 +158,9 @@ details.more[open] > summary::before{transform:rotate(90deg)}
 /* 문체 샘플 */
 .samp{display:flex;gap:9px;align-items:flex-start;padding:10px 11px;border:1px solid var(--line);
   border-radius:var(--r-sm);background:var(--surface-2);margin-top:8px}
-.samp p{margin:0;flex:1;font-size:13.5px;line-height:1.6;color:var(--ink-2);white-space:pre-wrap;word-break:break-word}
+.samp p{margin:0;flex:1;font-size:13.5px;line-height:1.6;color:var(--ink-2);white-space:pre-wrap;word-break:break-word;border:1px solid transparent;border-radius:7px;padding:3px 5px;margin:-3px -5px;cursor:text}
+.samp p:hover{border-color:var(--line)}
+.samp p:focus{outline:none;border-color:var(--accent);background:var(--surface);color:var(--ink)}
 .samp button{flex:none;min-height:30px;width:30px;padding:0;font-size:14px;color:var(--muted);background:transparent;border-color:transparent}
 .samp button:hover{border-color:var(--line);color:var(--bad)}
 
@@ -300,7 +302,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
       <div class="stack" style="margin-top:12px">
         <p style="margin:0;font-size:12.5px;color:var(--muted);line-height:1.6">
           지금까지 보내신 문자를 넣어두면 그 말투 · 길이 · 맺음말을 따라 씁니다.
-          내용을 베끼지는 않고 <b>문체만</b> 가져옵니다. 3~10개 정도면 충분합니다.
+          내용을 베끼지는 않고 <b>문체만</b> 가져옵니다. 3~10개 정도면 충분합니다.<br>아래 목록의 글을 <b>눌러서 바로 고칠 수 있습니다.</b> 고치면 자동으로 저장됩니다.
         </p>
         <div>
           <label class="lab" for="styleIn">보낸 문자 붙여넣기 <span style="font-weight:400">(여러 개면 빈 줄로 구분)</span></label>
@@ -787,24 +789,62 @@ if ("serviceWorker" in navigator) {
     return [];
   }
   var savedT;
-  function saveStyles(){
-    set("styles", JSON.stringify(styles));
-    drawStyles();
-    if (storageOK){
-      el.styleSaved.textContent = "이 기기에 저장됨 ✓";
-      clearTimeout(savedT);
-      savedT = setTimeout(function(){ el.styleSaved.textContent = ""; }, 3000);
-    }
+  function flashSaved(){
+    if (!storageOK) return;
+    el.styleSaved.textContent = "이 기기에 저장됨 ✓";
+    clearTimeout(savedT);
+    savedT = setTimeout(function(){ el.styleSaved.textContent = ""; }, 3000);
   }
+  /* 글자를 고치는 중에 목록을 다시 그리면 커서가 날아간다. 저장만 하는 길을 따로 둔다. */
+  function persistStyles(){ set("styles", JSON.stringify(styles)); flashSaved(); }
+  function saveStyles(){ persistStyles(); drawStyles(); }
   function drawStyles(){
     el.styleCount.textContent = String(styles.length);
     el.styleList.textContent = "";
     styles.forEach(function(s,i){
       var d = document.createElement("div"); d.className="samp";
-      var p = document.createElement("p"); p.textContent = s;
+
+      var p = document.createElement("p");
+      p.textContent = s;
+      p.contentEditable = "true";
+      p.spellcheck = false;
+      p.setAttribute("role","textbox");
+      p.setAttribute("aria-multiline","true");
+      p.setAttribute("aria-label", (i+1) + "번째 예시 — 눌러서 고칠 수 있습니다");
+
+      var typing;
+      /* 접힌 <details> 안에서는 innerText 가 빈 문자열로 나온다. 그대로 믿으면
+         멀쩡한 예시가 지워지므로 textContent 로 되짚는다. */
+      function value(){
+        var t = p.innerText;
+        if (!t || !t.trim()) t = p.textContent;
+        return String(t || "").replace(new RegExp(String.fromCharCode(160),"g"), " ").trim();
+      }
+      function commit(){
+        var v = value();
+        if (!v) return false;
+        if (v !== styles[i]){ styles[i] = v; persistStyles(); }
+        return true;
+      }
+      p.addEventListener("input", function(){
+        clearTimeout(typing);
+        typing = setTimeout(commit, 500);
+      });
+      p.addEventListener("blur", function(){
+        clearTimeout(typing);
+        /* 내용을 다 지웠다고 항목을 없애지는 않는다. 지우는 건 × 버튼의 몫이다. */
+        if (!commit()){ p.textContent = styles[i]; toast("지우려면 옆의 × 를 누르세요"); }
+      });
+      /* 엔터는 줄바꿈으로 두되, Esc 로 편집을 빠져나갈 수 있게 */
+      p.addEventListener("keydown", function(e){
+        if (e.key === "Escape"){ e.preventDefault(); p.blur(); }
+      });
+
       var b = document.createElement("button"); b.type="button"; b.textContent="×";
       b.setAttribute("aria-label",(i+1)+"번째 예시 지우기");
+      b.title = "이 예시 지우기";
       b.onclick = function(){ styles.splice(i,1); saveStyles(); };
+
       d.appendChild(p); d.appendChild(b); el.styleList.appendChild(d);
     });
   }
