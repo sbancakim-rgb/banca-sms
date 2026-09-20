@@ -258,6 +258,8 @@ details.more[open] > summary::before{transform:rotate(90deg)}
     <input type="file" id="camIn" accept="image/*" capture="environment" hidden>
     <input type="file" id="albIn" accept="image/*" multiple hidden>
     <div class="film" id="film"></div>
+    <button class="ghost" id="readBtn" hidden style="margin-top:11px;width:100%;min-height:44px">글귀 읽고 포인트 고르기</button>
+    <div id="quoteBox" hidden></div>
   </section>
 
   <!-- 문자 정보 -->
@@ -265,16 +267,13 @@ details.more[open] > summary::before{transform:rotate(90deg)}
     <div class="ph"><h2>문자 정보</h2><span>한 번 넣으면 저장됩니다</span></div>
     <div class="stack">
       <div>
-        <label class="lab" for="sender">보내는 사람 (서명)</label>
-        <input type="text" id="sender" placeholder="OO생명 방카채널 김OO" autocomplete="off">
-      </div>
-      <div>
         <label class="lab">문자 길이</label>
         <div class="chips" id="lenChips" role="group" aria-label="문자 길이">
-          <button class="chip" data-len="50" aria-pressed="false">아주 짧게<small>50자</small></button>
-          <button class="chip" data-len="80" aria-pressed="true">짧게<small>80자</small></button>
-          <button class="chip" data-len="120" aria-pressed="false">보통<small>120자</small></button>
-          <button class="chip" data-len="180" aria-pressed="false">길게<small>180자</small></button>
+          <button class="chip" data-len="200" aria-pressed="true">200자</button>
+          <button class="chip" data-len="400" aria-pressed="false">400자</button>
+          <button class="chip" data-len="600" aria-pressed="false">600자</button>
+          <button class="chip" data-len="800" aria-pressed="false">800자</button>
+          <button class="chip" data-len="1000" aria-pressed="false">1000자</button>
         </div>
       </div>
       <div>
@@ -344,7 +343,11 @@ details.more[open] > summary::before{transform:rotate(90deg)}
         한 번에 서로 다른 톤 3가지로 만듭니다. 목록에서 고르거나 <b>직접 입력</b>을 골라 원하는 대로 적으세요.
       </p>
       <div id="tones"></div>
-      <button class="ghost" id="toneReset" style="margin-top:10px">이 모드의 기본 조합으로</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">
+        <button class="ghost" id="toneSaveDefault">지금 조합을 기본으로 저장</button>
+        <button class="ghost" id="toneReset">기본 조합 불러오기</button>
+        <span id="toneDefaultMark" style="font-size:12px;color:var(--good);font-weight:600"></span>
+      </div>
     </details>
   </section>
 
@@ -362,7 +365,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
           <select id="model">
             <option value="claude-sonnet-5">Sonnet 5 — 빠르고 저렴 (권장)</option>
             <option value="claude-opus-5">Opus 5 — 가장 정교함</option>
-            <option value="claude-haiku-4-5-20251001">Haiku 4.5 — 가장 빠름</option>
+            <option value="claude-haiku-4-5">Haiku 4.5 — 가장 빠름</option>
           </select>
         </div>
         <p style="font-size:12px;color:var(--muted);margin:0;line-height:1.6">
@@ -408,7 +411,7 @@ if ("serviceWorker" in navigator) {
       shotTitle: "글귀 사진",
       shotHint: "명언 · 좋은 글 · 사진 카드",
       readLabel: "사진 속 글귀",
-      defaultLen: 80,
+      defaultLen: 200,
       showAd: false,
       foot: "보내기 전에 한 번 읽어 보세요. 글귀의 지은이나 출처가 사진과 다르게 적혔다면 고쳐 주시고, 받는 분과의 관계에 비해 과하게 사적인 표현은 덜어내는 편이 좋습니다.",
       defaults: ["q1","q2","q3"]
@@ -417,7 +420,7 @@ if ("serviceWorker" in navigator) {
       shotTitle: "자료 사진",
       shotHint: "시책표 · 안내문 · 실적표",
       readLabel: "사진에서 읽은 내용",
-      defaultLen: 120,
+      defaultLen: 400,
       showAd: true,
       foot: "생성된 문구는 초안입니다. 상품명 · 수수료율 · 기간 · 날짜는 원본 자료와 대조한 뒤 발송하시고, 보험 · 금융상품 안내 문자는 소속사 준법감시(광고심의) 기준을 따라 주세요.",
       defaults: ["p1","p2","p3"]
@@ -474,13 +477,15 @@ if ("serviceWorker" in navigator) {
     keyWarn:$("#keyWarn"), keyBox:$("#keyBox"), keySummary:$("#keySummary"), key:$("#apiKey"), model:$("#model"),
     modes:$("#modes"), shotTitle:$("#shotTitle"), shotCount:$("#shotCount"),
     cam:$("#camBtn"), alb:$("#albBtn"), camIn:$("#camIn"), albIn:$("#albIn"), film:$("#film"),
-    sender:$("#sender"), lenChips:$("#lenChips"), extra:$("#extra"),
+    lenChips:$("#lenChips"), extra:$("#extra"),
+    readBtn:$("#readBtn"), quoteBox:$("#quoteBox"),
+    toneSaveDefault:$("#toneSaveDefault"), toneDefaultMark:$("#toneDefaultMark"),
     adRow:$("#adRow"), adFlag:$("#adFlag"), adWrap:$("#adWrap"), adNum:$("#adNum"),
     styleBox:$("#styleBox"), styleCount:$("#styleCount"), styleIn:$("#styleIn"), styleIn2:$("#styleIn2"),
     styleAdd:$("#styleAdd"), styleShot:$("#styleShot"), styleClear:$("#styleClear"), styleList:$("#styleList"),
     styleSaved:$("#styleSaved"), storeWarn:$("#storeWarn"),
     backupOut:$("#backupOut"), backupIn:$("#backupIn"), backupText:$("#backupText"),
-    tones:$("#tones"), toneReset:$("#toneReset"),
+    tones:$("#tones"), toneReset:$("#toneReset"), toneBox:$("#toneBox"),
     notice:$("#notice"), results:$("#results"), go:$("#go"), stop:$("#stop"),
     toast:$("#toast"), tip:$("#installTip"), how:$("#installHow"), foot:$("#foot")
   };
@@ -535,6 +540,8 @@ if ("serviceWorker" in navigator) {
       d.appendChild(im); d.appendChild(b); el.film.appendChild(d);
     });
     el.shotCount.textContent = shots.length ? (shots.length + "장 · 최대 " + MAXSHOTS + "장") : MODES[mode].shotHint;
+    el.readBtn.hidden = !(mode === "quote" && shots.length);
+    clearQuote();
     syncGo();
   }
   el.cam.onclick = function(){ el.camIn.click(); };
@@ -569,6 +576,92 @@ if ("serviceWorker" in navigator) {
     });
   }
 
+  /* ================= 글귀 읽기 · 포인트 고르기 ================= */
+  var quote = null;   // {full, points:[{text, on}]}
+
+  var READ_TOOL = {
+    name:"read_quote",
+    description:"사진 속 글귀를 원문 그대로 옮기고, 중심으로 삼을 만한 구절로 나눕니다.",
+    input_schema:{ type:"object", properties:{
+      full:{ type:"string", description:"사진 속 글 전문. 줄바꿈 유지. 지은이나 출처가 보이면 마지막 줄에." },
+      points:{ type:"array", description:"글에서 따로 붙잡을 만한 구절 3~8개.", items:{type:"string"} }
+    }, required:["full","points"] }
+  };
+
+  function readQuote(){
+    if (!el.key.value.trim()){ toast("API 키를 먼저 넣어 주세요"); el.keyBox.open = true; return; }
+    if (!shots.length){ toast("사진을 먼저 올려 주세요"); return; }
+    el.readBtn.disabled = true;
+    var old = el.readBtn.textContent;
+    el.readBtn.textContent = "글귀를 읽는 중…";
+    resetCost();
+    var prompt = [
+      "첨부한 사진은 좋은 글귀나 명언이 담긴 이미지입니다.",
+      "1) 사진 속 글을 원문 그대로 옮겨 적으세요. 맞춤법을 고치거나 다듬지 마세요. 지은이나 출처가 보이면 함께 적고, 없으면 지어내지 마세요.",
+      "2) 그 글에서 문자의 중심으로 삼을 만한 구절을 3~8개로 나누세요.",
+      "   - 구절은 원문에 실제로 있는 표현이어야 합니다. 요약하거나 바꿔 쓰지 마세요.",
+      "   - 각 구절은 그 자체로 하나의 생각이 되도록 자르세요. 너무 잘게 쪼개지 마세요.",
+      "결과는 read_quote 도구로 전달하세요."
+    ].join("\n");
+    apiCall(shots.map(function(s){ return s.file; }), prompt, READ_TOOL, null, 2000).then(function(out){
+      var pts = (out.points||[]).filter(function(t){ return String(t||"").trim(); });
+      quote = { full: String(out.full||"").trim(),
+                points: pts.map(function(t){ return { text:String(t).trim(), on:false }; }) };
+      drawQuote();
+    })["catch"](function(e){
+      var f = friendly(e);
+      setNotice(alertBox(f.title, f.msg, f.detail));
+    })["finally"](function(){
+      el.readBtn.disabled = false; el.readBtn.textContent = old;
+    });
+  }
+  el.readBtn.onclick = readQuote;
+
+  function drawQuote(){
+    el.quoteBox.textContent = "";
+    if (!quote){ el.quoteBox.hidden = true; syncGo(); return; }
+    el.quoteBox.hidden = false;
+
+    var r = document.createElement("div"); r.className="readout"; r.style.marginTop="12px";
+    var b = document.createElement("b"); b.textContent="사진 속 글귀";
+    r.appendChild(b); r.appendChild(document.createTextNode(quote.full));
+    el.quoteBox.appendChild(r);
+
+    if (quote.points.length){
+      var lab = document.createElement("p");
+      lab.style.cssText = "margin:12px 0 7px;font-size:12px;font-weight:600;color:var(--muted)";
+      lab.textContent = "포인트로 잡을 구절 (여러 개 고를 수 있어요)";
+      el.quoteBox.appendChild(lab);
+
+      var wrap = document.createElement("div"); wrap.className="chips";
+      quote.points.forEach(function(pt,i){
+        var c = document.createElement("button");
+        c.type="button"; c.className="chip";
+        c.style.cssText = "text-align:left;white-space:normal;word-break:keep-all;line-height:1.45;border-radius:12px";
+        c.textContent = pt.text;
+        c.setAttribute("aria-pressed", pt.on ? "true":"false");
+        c.onclick = function(){
+          pt.on = !pt.on; c.setAttribute("aria-pressed", pt.on ? "true":"false"); syncGo();
+        };
+        wrap.appendChild(c);
+      });
+      el.quoteBox.appendChild(wrap);
+
+      var hint = document.createElement("p");
+      hint.style.cssText = "margin:8px 0 0;font-size:12px;color:var(--muted);line-height:1.5";
+      hint.textContent = "고른 구절을 중심으로 문자를 씁니다. 하나도 안 고르면 글 전체를 보고 씁니다.";
+      el.quoteBox.appendChild(hint);
+    }
+    var c = costLine();
+    if (c){ c.style.marginTop="10px"; el.quoteBox.appendChild(c); }
+    syncGo();
+  }
+  function pickedPoints(){
+    if (!quote) return [];
+    return quote.points.filter(function(p){ return p.on; }).map(function(p){ return p.text; });
+  }
+  function clearQuote(){ quote = null; el.quoteBox.hidden = true; el.quoteBox.textContent = ""; }
+
   /* ================= 모드 전환 ================= */
   function applyMode(){
     var M = MODES[mode];
@@ -580,7 +673,7 @@ if ("serviceWorker" in navigator) {
     el.foot.textContent = M.foot + " 고객 실명 · 주민번호 · 계좌번호가 찍힌 사진은 올리지 마세요.";
     targetLen = parseInt(get("len_"+mode, String(M.defaultLen)),10) || M.defaultLen;
     drawChips();
-    drawTones(loadPicks());
+    drawTones(loadPicks()); markDefault();
     if (!el.results.querySelector(".card:not(.sample)")){
       el.results.textContent = "";
       el.results.appendChild(card(EXAMPLES[mode], true));
@@ -605,15 +698,16 @@ if ("serviceWorker" in navigator) {
 
   /* ================= 톤 ================= */
   /* 선택 상태: [{id}] 또는 [{id:"custom", name, desc}] 3개 */
-  function loadPicks(){
-    try{
-      var raw = get("picks_"+mode, null);
-      if (raw){
-        var p = JSON.parse(raw);
-        if (Array.isArray(p) && p.length === 3) return p;
-      }
-    }catch(e){}
-    return MODES[mode].defaults.map(function(id){ return {id:id}; });
+  function parsePicks(raw){
+    try{ var p = JSON.parse(raw); if (Array.isArray(p) && p.length === 3) return p; }catch(e){}
+    return null;
+  }
+  function builtinPicks(){ return MODES[mode].defaults.map(function(id){ return {id:id}; }); }
+  /* 사용자가 저장해 둔 기본 조합이 있으면 그것이 기본이다. */
+  function defaultPicks(){ return parsePicks(get("mydef_"+mode, "")) || builtinPicks(); }
+  function loadPicks(){ return parsePicks(get("picks_"+mode, "")) || defaultPicks(); }
+  function markDefault(){
+    el.toneDefaultMark.textContent = get("mydef_"+mode, "") ? "내 기본 조합 있음" : "";
   }
   function savePicks(){ set("picks_"+mode, JSON.stringify(readPicks())); }
 
@@ -678,8 +772,13 @@ if ("serviceWorker" in navigator) {
   }
   el.tones.addEventListener("input", savePicks);
   el.toneReset.onclick = function(){
-    var d = MODES[mode].defaults.map(function(id){ return {id:id}; });
-    drawTones(d); savePicks(); toast("기본 조합으로 되돌렸어요");
+    drawTones(defaultPicks()); savePicks();
+    toast(get("mydef_"+mode,"") ? "내 기본 조합을 불러왔어요" : "처음 기본 조합으로 되돌렸어요");
+  };
+  el.toneSaveDefault.onclick = function(){
+    set("mydef_"+mode, JSON.stringify(readPicks()));
+    markDefault();
+    toast("이 조합을 기본으로 저장했어요");
   };
 
   /* ================= 내 문체 ================= */
@@ -742,8 +841,8 @@ if ("serviceWorker" in navigator) {
   });
 
   /* 백업 — 기기를 바꿔도 문체를 다시 입력하지 않게 */
-  var BACKUP_KEYS = ["styles","sender","extra","mode","model","ad","adNum",
-                     "len_quote","len_product","picks_quote","picks_product","theme"];
+  var BACKUP_KEYS = ["styles","extra","mode","model","ad","adNum",
+                     "len_quote","len_product","picks_quote","picks_product","mydef_quote","mydef_product","theme"];
   el.backupOut.onclick = function(){
     var o = {};
     BACKUP_KEYS.forEach(function(k){ var v = get(k, null); if (v !== null) o[k] = v; });
@@ -793,7 +892,7 @@ if ("serviceWorker" in navigator) {
       "- 맞춤법이나 표현을 고치지 말고 원문 그대로 옮기세요. 말투를 배우는 데 쓰입니다.\n" +
       "- 개인 이름이나 연락처가 본문에 있으면 그 부분만 OOO 로 바꾸세요.\n" +
       "결과는 save_samples 도구로 전달하세요.";
-    apiCall(files, prompt, tool, null).then(function(out){
+    apiCall(files, prompt, tool, null, 4000).then(function(out){
       var n = addStyles(out.messages || []);
       toast(n ? (n + "개 가져왔어요") : "옮길 문자를 찾지 못했어요");
     })["catch"](function(e){
@@ -825,8 +924,8 @@ if ("serviceWorker" in navigator) {
   /* ================= 프롬프트 ================= */
   function buildPrompt(){
     var tones = readTones();
-    var sender = el.sender.value.trim();
     var extra = el.extra.value.trim();
+    var pts = pickedPoints();
     var p = [];
 
     if (mode === "quote"){
@@ -870,12 +969,26 @@ if ("serviceWorker" in navigator) {
 
     p.push("");
     p.push("[공통]");
-    p.push("- 분량은 공백 포함 한글 " + targetLen + "자 내외(±20자).");
+    p.push("- 분량은 공백 포함 한글 " + targetLen + "자 내외. " +
+           (targetLen >= 600 ? "길게 쓰되 늘어지지 않게, 단락을 나눠 호흡을 주세요." : "±30자 안에서 맞추세요."));
     p.push("- 자연스러운 한국어 존댓말. 번역투와 과한 한자어를 피하세요.");
     p.push("- 줄바꿈은 읽기 쉬운 곳에만 최소한으로.");
     p.push("- 고객 실명·주민번호·계좌번호 등 개인정보는 넣지 마세요.");
-    if (sender) p.push("- 문자 끝에 발신자를 '" + sender + "' 로 표기하세요.");
+    p.push("- 서명, 발신자 이름, 소속, 연락처를 넣지 마세요. 본문만 씁니다.");
 
+    if (mode === "quote" && quote && quote.full){
+      p.push("");
+      p.push("[사진 속 글귀 — 이미 옮겨 적은 원문]");
+      p.push(quote.full);
+    }
+    if (pts.length){
+      p.push("");
+      p.push("[중심으로 잡을 구절]");
+      p.push("아래 구절이 이 문자의 핵심입니다. 세 문자 모두 여기에서 출발하세요.");
+      pts.forEach(function(t){ p.push("- “" + t + "”"); });
+      p.push("글귀의 나머지 부분은 배경으로만 쓰고, 위 구절이 건드리는 지점을 파고드세요.");
+      p.push("구절을 그대로 인용해서 분량을 채우지 마세요. 그 구절에 대한 생각이 본문입니다.");
+    }
     p.push("");
     p.push("[3개의 문자 — 톤을 서로 확실히 다르게]");
     tones.forEach(function(t,i){ p.push((i+1)+") "+t.name+": "+(t.desc||"자연스럽게")); });
@@ -915,7 +1028,36 @@ if ("serviceWorker" in navigator) {
   };
 
   /* ================= API ================= */
-  function apiCall(files, prompt, tool, signal){
+  /* 한글은 글자당 대략 1.5토큰. 생각(thinking) 토큰도 이 한도를 쓰므로 넉넉히 잡는다.
+     넉넉히 잡아도 실제로 쓴 만큼만 과금되니 손해가 아니고, 모자라면 답이 잘린다. */
+  function maxTokensFor(len){
+    return Math.min(32000, Math.max(4000, Math.round(len * 3 * 2 + 3000)));
+  }
+
+  /* 모델별 100만 토큰당 단가 (USD) — 입력, 출력 */
+  var RATES = { "claude-sonnet-5":[2,10], "claude-opus-5":[5,25], "claude-haiku-4-5":[1,5] };
+  var FX = 1450;   // 원/달러 (대략)
+  var runCost = null;
+  function resetCost(){ runCost = { inTok:0, outTok:0, won:0 }; }
+  function addCost(u){
+    if (!runCost || !u) return;
+    var r = RATES[el.model.value] || RATES["claude-sonnet-5"];
+    var i = (u.input_tokens||0) + (u.cache_read_input_tokens||0) + (u.cache_creation_input_tokens||0);
+    var o = u.output_tokens || 0;
+    runCost.inTok += i; runCost.outTok += o;
+    runCost.won += (i/1e6*r[0] + o/1e6*r[1]) * FX;
+  }
+  function costLine(){
+    if (!runCost || (!runCost.inTok && !runCost.outTok)) return null;
+    var d = document.createElement("p");
+    d.style.cssText = "margin:0;font-size:12px;color:var(--muted);text-align:right";
+    d.className = "num";
+    d.textContent = "이번 생성 약 " + Math.round(runCost.won) + "원 (입력 "
+      + runCost.inTok.toLocaleString() + " · 출력 " + runCost.outTok.toLocaleString() + " 토큰)";
+    return d;
+  }
+
+  function apiCall(files, prompt, tool, signal, maxTok){
     var key = el.key.value.trim();
     return Promise.all(files.map(prepImage)).then(function(imgs){
       var content = imgs.slice();
@@ -930,7 +1072,7 @@ if ("serviceWorker" in navigator) {
         },
         body: JSON.stringify({
           model: el.model.value,
-          max_tokens: 4000,
+          max_tokens: maxTok || 4000,
           system: SYSTEMS[mode],
           messages:[{ role:"user", content: content }],
           tools:[tool],
@@ -946,7 +1088,10 @@ if ("serviceWorker" in navigator) {
         }
         var data = JSON.parse(raw), blocks = data.content || [];
         for (var i=0;i<blocks.length;i++){
-          if (blocks[i].type === "tool_use" && blocks[i].input) return blocks[i].input;
+          if (blocks[i].type === "tool_use" && blocks[i].input){
+            addCost(data.usage);
+            return blocks[i].input;
+          }
         }
         var text = blocks.filter(function(b){ return b.type==="text"; }).map(function(b){ return b.text; }).join("\n").trim();
         var body = text.replace(/^```(?:json)?\s*/i,"").replace(/```\s*$/,"").trim();
@@ -1066,6 +1211,8 @@ if ("serviceWorker" in navigator) {
       el.results.appendChild(r);
     }
     (data.messages||[]).forEach(function(m){ el.results.appendChild(card(m,false)); });
+    var c = costLine();
+    if (c) el.results.appendChild(c);
     try{ el.results.scrollIntoView({behavior:"smooth",block:"start"}); }catch(e){ el.results.scrollIntoView(); }
   }
 
@@ -1110,7 +1257,7 @@ if ("serviceWorker" in navigator) {
     if (!el.key.value.trim()){ toast("API 키를 먼저 넣어 주세요"); el.keyBox.open=true; el.key.focus(); return; }
     if (!shots.length){ toast("사진을 먼저 올려 주세요"); return; }
 
-    busy = true; ctl = new AbortController();
+    busy = true; ctl = new AbortController(); resetCost();
     el.go.disabled = true; el.go.textContent = "만드는 중…"; el.stop.hidden = false;
     var st = statusBox(); setNotice(st);
     var t0 = Date.now();
@@ -1118,7 +1265,7 @@ if ("serviceWorker" in navigator) {
       st._em.textContent = Math.round((Date.now()-t0)/1000) + "초 경과 · 보통 15~40초 걸립니다";
     },1000);
 
-    apiCall(shots.map(function(s){ return s.file; }), buildPrompt(), SAVE_TOOL, ctl.signal).then(function(data){
+    apiCall(shots.map(function(s){ return s.file; }), buildPrompt(), SAVE_TOOL, ctl.signal, maxTokensFor(targetLen)).then(function(data){
       if (!data || !data.messages || !data.messages.length) throw new Error("문자 내용이 비어 있습니다. 다시 시도해 주세요.");
       setNotice(null); showResults(data); saveAll();
     })["catch"](function(e){
@@ -1141,7 +1288,6 @@ if ("serviceWorker" in navigator) {
   /* ================= 저장 ================= */
   function saveAll(){
     set("key", el.key.value); set("model", el.model.value);
-    set("sender", el.sender.value);
     set("extra", el.extra.value); set("ad", el.adFlag.checked?"1":"0");
     set("adNum", el.adNum.value); savePicks();
     set("len_"+mode, String(targetLen)); set("mode", mode);
@@ -1163,7 +1309,7 @@ if ("serviceWorker" in navigator) {
       el.keyWarn.appendChild(h);
     }
   }
-  [el.key, el.model, el.sender, el.extra, el.adNum].forEach(function(x){ x.addEventListener("change", saveAll); });
+  [el.key, el.model, el.extra, el.adNum].forEach(function(x){ x.addEventListener("change", saveAll); });
   el.key.addEventListener("input", markKey);
   el.adFlag.addEventListener("change", function(){ el.adWrap.hidden = !el.adFlag.checked; saveAll(); });
 
@@ -1200,7 +1346,6 @@ if ("serviceWorker" in navigator) {
   (function init(){
     el.key.value = get("key","");
     el.model.value = get("model","claude-sonnet-5") || "claude-sonnet-5";
-    el.sender.value = get("sender","");
     el.extra.value = get("extra","");
     el.adNum.value = get("adNum","");
     el.adFlag.checked = get("ad","0") === "1";
