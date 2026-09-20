@@ -146,8 +146,11 @@ details.more[open] > summary::before{transform:rotate(90deg)}
   background:var(--accent-wash);color:var(--accent)}
 
 .tone{border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface-2);padding:11px;margin-top:9px}
-.tone .tn{display:flex;align-items:center;gap:8px;margin-bottom:7px}
-.tone .tn input{font-weight:600;font-size:14px}
+.tone .tn{display:flex;align-items:center;gap:8px}
+.tone .tn select{font-weight:600;font-size:15px;background:var(--surface)}
+.tone .why{margin:7px 0 0 30px;font-size:12.5px;color:var(--muted);line-height:1.5;word-break:keep-all}
+.tone .cust{margin-top:8px;display:flex;flex-direction:column;gap:7px}
+.tone .cust input{font-weight:600;font-size:14px}
 .tone textarea{min-height:52px;font-size:14px}
 .ord{flex:none;width:22px;height:22px;border-radius:7px;display:grid;place-items:center;
   background:var(--accent-wash);color:var(--accent);font-size:11px;font-weight:700}
@@ -233,6 +236,7 @@ details.more[open] > summary::before{transform:rotate(90deg)}
 
 <div class="main">
 
+  <div id="storeWarn" hidden></div>
   <div id="keyWarn" hidden></div>
 
   <!-- 모드 -->
@@ -260,15 +264,9 @@ details.more[open] > summary::before{transform:rotate(90deg)}
   <section class="panel">
     <div class="ph"><h2>문자 정보</h2><span>한 번 넣으면 저장됩니다</span></div>
     <div class="stack">
-      <div class="two">
-        <div>
-          <label class="lab" for="sender">보내는 사람 (서명)</label>
-          <input type="text" id="sender" placeholder="OO생명 방카채널 김OO" autocomplete="off">
-        </div>
-        <div>
-          <label class="lab" for="target">받는 분</label>
-          <input type="text" id="target" placeholder="OO은행 영업점 팀장님" autocomplete="off">
-        </div>
+      <div>
+        <label class="lab" for="sender">보내는 사람 (서명)</label>
+        <input type="text" id="sender" placeholder="OO생명 방카채널 김OO" autocomplete="off">
       </div>
       <div>
         <label class="lab">문자 길이</label>
@@ -311,23 +309,42 @@ details.more[open] > summary::before{transform:rotate(90deg)}
 
 팀장님, 비가 많이 옵니다. 출근길 조심하시고 ..."></textarea>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <button class="ghost" id="styleAdd">붙여넣은 것 추가</button>
           <button class="ghost" id="styleShot">보낸 문자 캡처에서 가져오기</button>
+          <span id="styleSaved" style="font-size:12px;color:var(--good);font-weight:600"></span>
           <button class="ghost" id="styleClear" style="margin-left:auto;color:var(--bad)">전체 지우기</button>
         </div>
         <input type="file" id="styleIn2" accept="image/*" multiple hidden>
         <div id="styleList"></div>
+
+        <details class="more" id="backupBox" style="border-top:1px solid var(--line-soft);padding-top:8px">
+          <summary>백업 · 옮기기</summary>
+          <div class="stack" style="margin-top:10px">
+            <p style="margin:0;font-size:12.5px;color:var(--muted);line-height:1.6">
+              문체와 설정은 이 기기에만 저장됩니다. 폰을 바꾸거나 앱을 지웠다 깔면 사라지니,
+              가끔 백업 글자를 복사해 메모장에 붙여 두세요.
+            </p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="ghost" id="backupOut">백업 글자 만들기</button>
+              <button class="ghost" id="backupIn">붙여넣은 백업 불러오기</button>
+            </div>
+            <textarea id="backupText" placeholder="여기에 백업 글자가 나옵니다. 다른 기기에서는 이 칸에 붙여넣고 '불러오기'를 누르세요." style="font-size:12px;min-height:90px"></textarea>
+          </div>
+        </details>
       </div>
     </details>
   </section>
 
   <!-- 톤 -->
   <section class="panel">
-    <details class="more">
-      <summary>문자 3종의 톤 바꾸기</summary>
+    <details class="more" id="toneBox">
+      <summary>문자 3종의 톤 고르기</summary>
+      <p style="margin:10px 0 0;font-size:12.5px;color:var(--muted);line-height:1.6">
+        한 번에 서로 다른 톤 3가지로 만듭니다. 목록에서 고르거나 <b>직접 입력</b>을 골라 원하는 대로 적으세요.
+      </p>
       <div id="tones"></div>
-      <button class="ghost" id="toneReset" style="margin-top:10px">이 모드의 기본값으로 되돌리기</button>
+      <button class="ghost" id="toneReset" style="margin-top:10px">이 모드의 기본 조합으로</button>
     </details>
   </section>
 
@@ -394,11 +411,7 @@ if ("serviceWorker" in navigator) {
       defaultLen: 80,
       showAd: false,
       foot: "보내기 전에 한 번 읽어 보세요. 글귀의 지은이나 출처가 사진과 다르게 적혔다면 고쳐 주시고, 받는 분과의 관계에 비해 과하게 사적인 표현은 덜어내는 편이 좋습니다.",
-      tones: [
-        {name:"담백한 사색형", desc:"군더더기 없이 한 가지 생각만. 설명하지 말고 여운을 남기고 끝낸다."},
-        {name:"일상 연결형", desc:"글귀를 은행 영업 현장의 하루(창구, 사람 상대하는 일, 숫자에 쫓기는 시간)와 이어 붙인다."},
-        {name:"따뜻한 안부형", desc:"안부 인사가 중심. 글귀는 그 인사를 여는 실마리로만 쓴다. 날씨나 계절을 한 줄 얹어도 좋다."}
-      ]
+      defaults: ["q1","q2","q3"]
     },
     product: {
       shotTitle: "자료 사진",
@@ -407,13 +420,44 @@ if ("serviceWorker" in navigator) {
       defaultLen: 120,
       showAd: true,
       foot: "생성된 문구는 초안입니다. 상품명 · 수수료율 · 기간 · 날짜는 원본 자료와 대조한 뒤 발송하시고, 보험 · 금융상품 안내 문자는 소속사 준법감시(광고심의) 기준을 따라 주세요.",
-      tones: [
-        {name:"정중한 공지형", desc:"격식을 갖춘 정보 전달 중심. 핵심을 담백하고 명확하게. 과장 없이 신뢰감 있게."},
-        {name:"친근한 안부형", desc:"관계 유지에 초점. 짧은 안부 인사로 시작해 부드럽게 본론으로. 따뜻하지만 가볍지 않게."},
-        {name:"실적 독려형", desc:"행동을 이끄는 데 초점. 마감일·혜택·기회를 앞세우고 마지막에 명확한 요청 한 줄. 압박보다 응원하는 어조로."}
-      ]
+      defaults: ["p1","p2","p3"]
     }
   };
+
+  /* 톤 목록 — 드롭다운에서 고른다 */
+  var TONE_LIB = {
+    quote: [
+      {id:"q1", name:"담백한 사색형", desc:"군더더기 없이 한 가지 생각만. 설명하지 말고 여운을 남기고 끝낸다."},
+      {id:"q2", name:"일상 연결형", desc:"글귀를 은행 영업 현장의 하루(창구, 사람 상대하는 일, 숫자에 쫓기는 시간)와 이어 붙인다."},
+      {id:"q3", name:"따뜻한 안부형", desc:"안부 인사가 중심. 글귀는 그 인사를 여는 실마리로만 쓴다. 날씨나 계절을 한 줄 얹어도 좋다."},
+      {id:"q4", name:"짧고 단단한 한 줄", desc:"두세 문장 안에 끝낸다. 형용사를 걷어내고 명사와 동사로만. 격언처럼 단단하게."},
+      {id:"q5", name:"질문을 남기는 형", desc:"답을 주지 말고 물음으로 끝낸다. 받는 분이 스스로 생각을 이어가게 여지를 남긴다."},
+      {id:"q6", name:"계절·날씨 연결형", desc:"지금의 계절이나 날씨에서 시작해 글귀로 자연스럽게 건너간다. 건강이나 출퇴근길 안부로 맺는다."},
+      {id:"q7", name:"감사 전하는 형", desc:"글귀를 빌려 평소의 고마움을 전한다. 구체적인 일을 들되 과하지 않게. 부담 주는 표현은 피한다."},
+      {id:"q8", name:"경험 고백형", desc:"보내는 사람이 겪은 일 한 토막을 짧게 꺼내고, 글귀가 그 일을 어떻게 다시 보게 했는지 적는다."},
+      {id:"q9", name:"담백한 응원형", desc:"힘내라는 말 없이 응원한다. 상황을 알아주는 한 문장이 격려보다 낫다는 태도로."},
+      {id:"q10", name:"가벼운 미소형", desc:"무겁지 않게, 살짝 웃을 수 있는 한 구절을 넣는다. 농담이 아니라 여유. 장난스러움은 금물."},
+      {id:"q11", name:"한 주 여는 형", desc:"월요일 아침에 보내는 문자. 한 주를 시작하는 마음가짐에 글귀를 얹는다."},
+      {id:"q12", name:"한 주 닫는 형", desc:"금요일 저녁이나 주말에 보내는 문자. 한 주를 돌아보는 어조로. 쉬시라는 말로 맺는다."}
+    ],
+    product: [
+      {id:"p1", name:"정중한 공지형", desc:"격식을 갖춘 정보 전달 중심. 핵심을 담백하고 명확하게. 과장 없이 신뢰감 있게."},
+      {id:"p2", name:"친근한 안부형", desc:"관계 유지에 초점. 짧은 안부 인사로 시작해 부드럽게 본론으로. 따뜻하지만 가볍지 않게."},
+      {id:"p3", name:"실적 독려형", desc:"행동을 이끄는 데 초점. 마감일·혜택·기회를 앞세우고 마지막에 명확한 요청 한 줄. 압박보다 응원하는 어조로."},
+      {id:"p4", name:"핵심만 요약형", desc:"인사 없이 바로 본론. 조건과 숫자만 짧게 끊어서. 바쁜 분이 3초 안에 파악할 수 있게."},
+      {id:"p5", name:"마감 임박형", desc:"남은 기간을 앞세운다. 재촉이 아니라 놓치실까 알려드린다는 어조로."},
+      {id:"p6", name:"감사 겸 안내형", desc:"지난 실적이나 도움에 대한 감사로 열고, 그 뒤에 이번 안내를 얹는다."},
+      {id:"p7", name:"질문 받는 형", desc:"안내는 짧게 하고, 궁금한 점을 편하게 물어보시라는 데 무게를 둔다. 상담 창구를 여는 문자."},
+      {id:"p8", name:"현장 도움형", desc:"팀장님 입장에서 창구 응대에 바로 쓸 수 있는 요점을 짚어 준다. 파는 쪽이 아니라 돕는 쪽의 어조."}
+    ]
+  };
+  var CUSTOM = "custom";
+
+  function toneById(id){
+    var lib = TONE_LIB[mode];
+    for (var i=0;i<lib.length;i++) if (lib[i].id === id) return lib[i];
+    return lib[0];
+  }
 
   var EXAMPLES = {
     quote: { tone:"담백한 사색형",
@@ -430,18 +474,38 @@ if ("serviceWorker" in navigator) {
     keyWarn:$("#keyWarn"), keyBox:$("#keyBox"), keySummary:$("#keySummary"), key:$("#apiKey"), model:$("#model"),
     modes:$("#modes"), shotTitle:$("#shotTitle"), shotCount:$("#shotCount"),
     cam:$("#camBtn"), alb:$("#albBtn"), camIn:$("#camIn"), albIn:$("#albIn"), film:$("#film"),
-    sender:$("#sender"), target:$("#target"), lenChips:$("#lenChips"), extra:$("#extra"),
+    sender:$("#sender"), lenChips:$("#lenChips"), extra:$("#extra"),
     adRow:$("#adRow"), adFlag:$("#adFlag"), adWrap:$("#adWrap"), adNum:$("#adNum"),
     styleBox:$("#styleBox"), styleCount:$("#styleCount"), styleIn:$("#styleIn"), styleIn2:$("#styleIn2"),
     styleAdd:$("#styleAdd"), styleShot:$("#styleShot"), styleClear:$("#styleClear"), styleList:$("#styleList"),
+    styleSaved:$("#styleSaved"), storeWarn:$("#storeWarn"),
+    backupOut:$("#backupOut"), backupIn:$("#backupIn"), backupText:$("#backupText"),
     tones:$("#tones"), toneReset:$("#toneReset"),
     notice:$("#notice"), results:$("#results"), go:$("#go"), stop:$("#stop"),
     toast:$("#toast"), tip:$("#installTip"), how:$("#installHow"), foot:$("#foot")
   };
 
-  var mem = {};
+  var mem = {}, storageOK = true;
   function get(k,d){ try{ var v=localStorage.getItem("banca_"+k); return v===null?d:v; }catch(e){ return (k in mem)?mem[k]:d; } }
-  function set(k,v){ mem[k]=v; try{ localStorage.setItem("banca_"+k,v); }catch(e){} }
+  function set(k,v){
+    mem[k]=v;
+    try{
+      localStorage.setItem("banca_"+k, v);
+      if (localStorage.getItem("banca_"+k) !== v) throw new Error("verify failed");
+    }catch(e){ if (storageOK){ storageOK = false; showStoreWarn(); } }
+  }
+  /* 저장이 안 되는 환경(사생활 보호 모드, 저장공간 차단 등)은 조용히 넘어가면 안 된다.
+     문체를 다시 넣는 헛수고를 하게 되므로 화면에 분명히 알린다. */
+  function showStoreWarn(){
+    el.storeWarn.hidden = false; el.storeWarn.textContent = "";
+    var h = document.createElement("div"); h.className="alert";
+    var b = document.createElement("b"); b.textContent="이 기기에 설정을 저장할 수 없습니다";
+    h.appendChild(b); h.appendChild(document.createElement("br"));
+    h.appendChild(document.createTextNode(
+      "시크릿 모드이거나 브라우저가 저장을 막고 있습니다. 앱을 닫으면 문체와 설정이 사라집니다. " +
+      "일반 창에서 열거나, 사이트 데이터 허용을 켜 주세요."));
+    el.storeWarn.appendChild(h);
+  }
 
   var mode = (get("mode","quote") === "product") ? "product" : "quote";
   var targetLen = parseInt(get("len_"+mode, String(MODES[mode].defaultLen)),10) || MODES[mode].defaultLen;
@@ -516,7 +580,7 @@ if ("serviceWorker" in navigator) {
     el.foot.textContent = M.foot + " 고객 실명 · 주민번호 · 계좌번호가 찍힌 사진은 올리지 마세요.";
     targetLen = parseInt(get("len_"+mode, String(M.defaultLen)),10) || M.defaultLen;
     drawChips();
-    drawTones(loadTones());
+    drawTones(loadPicks());
     if (!el.results.querySelector(".card:not(.sample)")){
       el.results.textContent = "";
       el.results.appendChild(card(EXAMPLES[mode], true));
@@ -540,35 +604,82 @@ if ("serviceWorker" in navigator) {
   });
 
   /* ================= 톤 ================= */
-  function loadTones(){
+  /* 선택 상태: [{id}] 또는 [{id:"custom", name, desc}] 3개 */
+  function loadPicks(){
     try{
-      var raw = get("tones_"+mode, null);
-      if (raw){ var p = JSON.parse(raw); if (p && p.length === 3) return p; }
+      var raw = get("picks_"+mode, null);
+      if (raw){
+        var p = JSON.parse(raw);
+        if (Array.isArray(p) && p.length === 3) return p;
+      }
     }catch(e){}
-    return MODES[mode].tones;
+    return MODES[mode].defaults.map(function(id){ return {id:id}; });
   }
-  function drawTones(list){
+  function savePicks(){ set("picks_"+mode, JSON.stringify(readPicks())); }
+
+  function drawTones(picks){
     el.tones.textContent = "";
-    list.forEach(function(t,i){
+    picks.forEach(function(pick,i){
       var d = document.createElement("div"); d.className="tone";
+
       var head = document.createElement("div"); head.className="tn";
       var ord = document.createElement("span"); ord.className="ord"; ord.textContent=String(i+1);
-      var nm = document.createElement("input"); nm.type="text"; nm.className="t-name"; nm.value=t.name;
-      nm.setAttribute("aria-label",(i+1)+"번 톤 이름");
-      head.appendChild(ord); head.appendChild(nm);
-      var ta = document.createElement("textarea"); ta.className="t-desc"; ta.value=t.desc;
-      ta.setAttribute("aria-label",(i+1)+"번 톤 설명");
-      d.appendChild(head); d.appendChild(ta); el.tones.appendChild(d);
+      var sel = document.createElement("select"); sel.className="t-sel";
+      sel.setAttribute("aria-label",(i+1)+"번째 문자의 톤");
+      TONE_LIB[mode].forEach(function(t){
+        var o = document.createElement("option"); o.value=t.id; o.textContent=t.name; sel.appendChild(o);
+      });
+      var oc = document.createElement("option"); oc.value=CUSTOM; oc.textContent="직접 입력"; sel.appendChild(oc);
+      sel.value = pick.id;
+      head.appendChild(ord); head.appendChild(sel);
+      d.appendChild(head);
+
+      var why = document.createElement("p"); why.className="why";
+      d.appendChild(why);
+
+      var cust = document.createElement("div"); cust.className="cust";
+      var nm = document.createElement("input"); nm.type="text"; nm.className="c-name";
+      nm.placeholder="톤 이름 (예: 새벽 감성형)";
+      nm.value = pick.id === CUSTOM ? (pick.name||"") : "";
+      nm.setAttribute("aria-label",(i+1)+"번째 톤 이름");
+      var ta = document.createElement("textarea"); ta.className="c-desc";
+      ta.placeholder="어떤 식으로 써야 하는지 적어 주세요. 예) 새벽에 혼자 있는 시간을 떠올리게, 아주 조용한 어조로.";
+      ta.value = pick.id === CUSTOM ? (pick.desc||"") : "";
+      ta.setAttribute("aria-label",(i+1)+"번째 톤 설명");
+      cust.appendChild(nm); cust.appendChild(ta);
+      d.appendChild(cust);
+
+      function sync(){
+        var isCustom = sel.value === CUSTOM;
+        cust.hidden = !isCustom;
+        why.hidden = isCustom;
+        if (!isCustom) why.textContent = toneById(sel.value).desc;
+      }
+      sel.addEventListener("change", function(){ sync(); savePicks(); });
+      sync();
+      el.tones.appendChild(d);
     });
   }
-  function readTones(){
+  function readPicks(){
     return Array.prototype.map.call(el.tones.querySelectorAll(".tone"), function(d){
-      return { name:d.querySelector(".t-name").value.trim() || "기본", desc:d.querySelector(".t-desc").value.trim() };
+      var id = d.querySelector(".t-sel").value;
+      if (id !== CUSTOM) return { id:id };
+      return { id:CUSTOM,
+               name: d.querySelector(".c-name").value.trim(),
+               desc: d.querySelector(".c-desc").value.trim() };
     });
   }
-  el.tones.addEventListener("input", function(){ set("tones_"+mode, JSON.stringify(readTones())); });
+  /* 프롬프트에 넣을 {name, desc} 형태로 */
+  function readTones(){
+    return readPicks().map(function(p,i){
+      if (p.id !== CUSTOM){ var t = toneById(p.id); return { name:t.name, desc:t.desc }; }
+      return { name: p.name || ("직접 지정 " + (i+1)), desc: p.desc || "자연스럽게" };
+    });
+  }
+  el.tones.addEventListener("input", savePicks);
   el.toneReset.onclick = function(){
-    drawTones(MODES[mode].tones); set("tones_"+mode, JSON.stringify(MODES[mode].tones)); toast("기본값으로 되돌렸어요");
+    var d = MODES[mode].defaults.map(function(id){ return {id:id}; });
+    drawTones(d); savePicks(); toast("기본 조합으로 되돌렸어요");
   };
 
   /* ================= 내 문체 ================= */
@@ -576,7 +687,16 @@ if ("serviceWorker" in navigator) {
     try{ var raw = get("styles", null); if (raw){ var p = JSON.parse(raw); if (Array.isArray(p)) return p; } }catch(e){}
     return [];
   }
-  function saveStyles(){ set("styles", JSON.stringify(styles)); drawStyles(); }
+  var savedT;
+  function saveStyles(){
+    set("styles", JSON.stringify(styles));
+    drawStyles();
+    if (storageOK){
+      el.styleSaved.textContent = "이 기기에 저장됨 ✓";
+      clearTimeout(savedT);
+      savedT = setTimeout(function(){ el.styleSaved.textContent = ""; }, 3000);
+    }
+  }
   function drawStyles(){
     el.styleCount.textContent = String(styles.length);
     el.styleList.textContent = "";
@@ -605,7 +725,7 @@ if ("serviceWorker" in navigator) {
     var raw = el.styleIn.value;
     var parts = raw.split(/\n\s*\n/);
     var n = addStyles(parts);
-    if (n){ el.styleIn.value = ""; toast(n + "개 추가했어요"); }
+    if (n){ el.styleIn.value = ""; set("styleDraft",""); toast(n + "개 추가했어요"); }
     else toast(styles.length >= MAXSTYLE ? ("최대 " + MAXSTYLE + "개까지예요") : "추가할 내용이 없어요");
   };
   el.styleClear.onclick = function(){
@@ -613,6 +733,41 @@ if ("serviceWorker" in navigator) {
     styles = []; saveStyles(); toast("모두 지웠어요");
   };
   el.styleShot.onclick = function(){ el.styleIn2.click(); };
+
+  /* 붙여넣기만 하고 '추가'를 안 눌러도 글이 날아가지 않도록 초안을 저장해 둔다. */
+  var draftT;
+  el.styleIn.addEventListener("input", function(){
+    clearTimeout(draftT);
+    draftT = setTimeout(function(){ set("styleDraft", el.styleIn.value); }, 400);
+  });
+
+  /* 백업 — 기기를 바꿔도 문체를 다시 입력하지 않게 */
+  var BACKUP_KEYS = ["styles","sender","extra","mode","model","ad","adNum",
+                     "len_quote","len_product","picks_quote","picks_product","theme"];
+  el.backupOut.onclick = function(){
+    var o = {};
+    BACKUP_KEYS.forEach(function(k){ var v = get(k, null); if (v !== null) o[k] = v; });
+    var txt = JSON.stringify({ v:1, at:new Date().toISOString().slice(0,10), data:o });
+    el.backupText.value = txt;
+    el.backupText.focus(); el.backupText.select();
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(function(){ toast("백업 글자를 복사했어요"); })
+        ["catch"](function(){ toast("아래 글자를 길게 눌러 복사해 주세요"); });
+    } else toast("아래 글자를 길게 눌러 복사해 주세요");
+  };
+  el.backupIn.onclick = function(){
+    var raw = el.backupText.value.trim();
+    if (!raw){ toast("백업 글자를 먼저 붙여넣어 주세요"); return; }
+    var o;
+    try{ o = JSON.parse(raw); }catch(e){ toast("백업 글자를 읽지 못했어요"); return; }
+    var d = (o && o.data) ? o.data : o;
+    if (!d || typeof d !== "object"){ toast("백업 글자를 읽지 못했어요"); return; }
+    var n = 0;
+    BACKUP_KEYS.forEach(function(k){ if (typeof d[k] === "string"){ set(k, d[k]); n++; } });
+    if (!n){ toast("불러올 내용이 없어요"); return; }
+    toast(n + "개 항목을 불러왔어요");
+    setTimeout(function(){ location.reload(); }, 700);
+  };
   el.styleIn2.onchange = function(e){
     var files = Array.prototype.slice.call(e.target.files||[]).slice(0,5);
     e.target.value = "";
@@ -670,13 +825,12 @@ if ("serviceWorker" in navigator) {
   /* ================= 프롬프트 ================= */
   function buildPrompt(){
     var tones = readTones();
-    var target = el.target.value.trim() || "은행 영업점 팀장님";
     var sender = el.sender.value.trim();
     var extra = el.extra.value.trim();
     var p = [];
 
     if (mode === "quote"){
-      p.push("함께 보내는 사진은 좋은 글귀나 명언이 담긴 이미지입니다. 보내는 사람은 이 이미지를 " + target + "께 보내면서, 이미지 아래에 붙일 짧은 문자를 함께 보내려 합니다.");
+      p.push("함께 보내는 사진은 좋은 글귀나 명언이 담긴 이미지입니다. 보내는 사람은 이 이미지를 여러 은행 영업점 팀장님께 보내면서, 이미지 아래에 붙일 짧은 문자를 함께 보내려 합니다.");
       p.push("");
       p.push("[이 문자가 하는 일]");
       p.push("글귀를 읽고 한 번 더 생각해볼 만한 지점을 짚어 주는 것. 거기서 얻은 작은 깨달음을 담담하게 나누는 것. 그렇게 안부를 전하고 관계를 이어가는 것.");
@@ -696,12 +850,12 @@ if ("serviceWorker" in navigator) {
       p.push("6. 글귀의 지은이나 출처가 사진에 없으면 지어내지 마세요.");
       p.push("");
       p.push("[받는 사람]");
-      p.push(target + " — 거래 관계에 있는 분입니다. 예의는 지키되, 업무 공지처럼 딱딱하지 않게. 친한 척은 금물입니다.");
+      p.push("은행 영업점 팀장님들 — 거래 관계에 있는 분들입니다. 예의는 지키되, 업무 공지처럼 딱딱하지 않게. 친한 척은 금물입니다.");
     } else {
-      p.push("함께 보내는 사진은 은행 방카슈랑스/금융상품 영업 자료입니다. 사진에 적힌 내용을 정확히 읽고, 그 내용을 바탕으로 " + target + "께 보낼 문자 초안을 작성하세요.");
+      p.push("함께 보내는 사진은 은행 방카슈랑스/금융상품 영업 자료입니다. 사진에 적힌 내용을 정확히 읽고, 그 내용을 바탕으로 여러 은행 영업점 팀장님께 보낼 문자 초안을 작성하세요.");
       p.push("");
       p.push("[받는 사람]");
-      p.push(target + " — 바쁜 은행 영업점 관리자입니다. 장황한 설명보다 핵심이 먼저 보여야 합니다.");
+      p.push("은행 영업점 팀장님들 — 바쁜 관리자들입니다. 장황한 설명보다 핵심이 먼저 보여야 합니다.");
       p.push("");
       p.push("[규칙]");
       p.push("1. 사진에 실제로 적힌 사실만 쓰세요. 상품명, 금액, 이율, 수수료율, 기간, 날짜, 조건은 그대로 옮기고 절대 지어내지 마세요.");
@@ -987,9 +1141,9 @@ if ("serviceWorker" in navigator) {
   /* ================= 저장 ================= */
   function saveAll(){
     set("key", el.key.value); set("model", el.model.value);
-    set("sender", el.sender.value); set("target", el.target.value);
+    set("sender", el.sender.value);
     set("extra", el.extra.value); set("ad", el.adFlag.checked?"1":"0");
-    set("adNum", el.adNum.value); set("tones_"+mode, JSON.stringify(readTones()));
+    set("adNum", el.adNum.value); savePicks();
     set("len_"+mode, String(targetLen)); set("mode", mode);
     markKey();
   }
@@ -1009,7 +1163,7 @@ if ("serviceWorker" in navigator) {
       el.keyWarn.appendChild(h);
     }
   }
-  [el.key, el.model, el.sender, el.target, el.extra, el.adNum].forEach(function(x){ x.addEventListener("change", saveAll); });
+  [el.key, el.model, el.sender, el.extra, el.adNum].forEach(function(x){ x.addEventListener("change", saveAll); });
   el.key.addEventListener("input", markKey);
   el.adFlag.addEventListener("change", function(){ el.adWrap.hidden = !el.adFlag.checked; saveAll(); });
 
@@ -1047,13 +1201,20 @@ if ("serviceWorker" in navigator) {
     el.key.value = get("key","");
     el.model.value = get("model","claude-sonnet-5") || "claude-sonnet-5";
     el.sender.value = get("sender","");
-    el.target.value = get("target","");
     el.extra.value = get("extra","");
     el.adNum.value = get("adNum","");
     el.adFlag.checked = get("ad","0") === "1";
     el.adWrap.hidden = !el.adFlag.checked;
 
     styles = loadStyles(); drawStyles();
+    el.styleIn.value = get("styleDraft","");
+
+    /* 저장이 실제로 되는지 한 번 확인해 둔다 */
+    set("ping", String(Date.now()));
+
+    /* 브라우저가 저장공간을 회수하지 않도록 요청 (지원하는 곳에서만) */
+    try{ if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+
     markKey();
     if (!el.key.value.trim()) el.keyBox.open = true;
 
