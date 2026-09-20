@@ -487,12 +487,36 @@ if ("serviceWorker" in navigator) {
     tones.forEach(function(t,i){ p.push((i+1)+") "+t.name+": "+(t.desc||"자연스럽게")); });
     if (extra){ p.push(""); p.push("[반드시 반영할 내용]"); p.push(extra); }
     p.push("");
-    p.push("[출력 형식]");
-    p.push("다른 말 없이 아래 JSON 하나만 출력하세요. 코드블록 표시도 붙이지 마세요.");
-    p.push('{"read":"사진에서 읽어낸 핵심 내용 2~4문장","messages":[{"tone":"톤 이름","text":"문자 전문"},{"tone":"...","text":"..."},{"tone":"...","text":"..."}]}');
+    p.push("[출력 방법]");
+    p.push("결과는 반드시 save_draft 도구를 호출해서 전달하세요. 채팅으로 답하지 마세요.");
     p.push("text 에는 실제로 발송할 문자 본문만 넣고 제목이나 설명은 넣지 마세요.");
+    p.push("사진이 흐리거나 글씨가 안 보여도 도구는 호출하세요 — read 에 무엇이 안 보이는지 적고, 읽어낸 만큼만으로 문자를 작성하면 됩니다.");
     return p.join("\n");
   }
+
+  var SAVE_TOOL = {
+    name: "save_draft",
+    description: "작성한 문자 초안 3개와 사진에서 읽은 내용을 앱에 전달합니다. 결과는 반드시 이 도구로만 전달하세요.",
+    input_schema: {
+      type: "object",
+      properties: {
+        read: { type: "string", description: "사진에서 읽어낸 핵심 내용 2~4문장 요약. 읽히지 않은 부분이 있으면 그것도 적을 것." },
+        messages: {
+          type: "array",
+          description: "문자 초안 3개. 요청받은 톤 순서대로.",
+          items: {
+            type: "object",
+            properties: {
+              tone: { type: "string", description: "이 문자의 톤 이름" },
+              text: { type: "string", description: "실제로 발송할 문자 본문 전문" }
+            },
+            required: ["tone", "text"]
+          }
+        }
+      },
+      required: ["read", "messages"]
+    }
+  };
 
   /* ---------- API ---------- */
   function callClaude(signal){
@@ -511,9 +535,11 @@ if ("serviceWorker" in navigator) {
         },
         body: JSON.stringify({
           model: el.model.value,
-          max_tokens: 2000,
-          system:"당신은 국내 보험사 방카슈랑스 채널의 베테랑 도매영업(홀세일러) 담당자입니다. 은행 영업점 팀장에게 보내는 실무 문자를 씁니다. 사실 관계에 엄격하고, 자료에 없는 숫자는 절대 만들어내지 않습니다. 항상 요청받은 JSON 형식만 출력합니다.",
-          messages:[{ role:"user", content: content }]
+          max_tokens: 4000,
+          system:"당신은 국내 보험사 방카슈랑스 채널의 베테랑 도매영업(홀세일러) 담당자입니다. 은행 영업점 팀장에게 보내는 실무 문자를 씁니다. 사실 관계에 엄격하고, 자료에 없는 숫자는 절대 만들어내지 않습니다.",
+          messages:[{ role:"user", content: content }],
+          tools: [SAVE_TOOL],
+          tool_choice: { type:"tool", name:"save_draft" }
         })
       });
     }).then(function(res){
@@ -524,15 +550,30 @@ if ("serviceWorker" in navigator) {
           var e2 = new Error(msg); e2.status = res.status; throw e2;
         }
         var data = JSON.parse(raw);
-        var text = (data.content||[]).filter(function(b){ return b.type==="text"; })
-                     .map(function(b){ return b.text; }).join("\n").trim();
-        text = text.replace(/^```(?:json)?\s*/i,"").replace(/```\s*$/,"").trim();
-        try{ return JSON.parse(text); }
-        catch(e){
-          var a = text.indexOf("{"), b = text.lastIndexOf("}");
-          if (a === -1 || b === -1) { var e3 = new Error("응답을 해석하지 못했습니다."); e3.parse = true; throw e3; }
-          return JSON.parse(text.slice(a,b+1));
+        var blocks = data.content || [];
+
+        // 정상 경로: 도구 호출의 input 이 곧 결과다.
+        for (var i=0;i<blocks.length;i++){
+          if (blocks[i].type === "tool_use" && blocks[i].input && blocks[i].input.messages) {
+            return blocks[i].input;
+          }
         }
+
+        // 도구를 안 쓴 경우: 예전 방식(본문 JSON)도 받아준다.
+        var text = blocks.filter(function(b){ return b.type==="text"; })
+                     .map(function(b){ return b.text; }).join("\n").trim();
+        var body = text.replace(/^```(?:json)?\s*/i,"").replace(/```\s*$/,"").trim();
+        var a = body.indexOf("{"), b = body.lastIndexOf("}");
+        if (a !== -1 && b !== -1){
+          try{ return JSON.parse(body.slice(a,b+1)); }catch(e){}
+        }
+
+        // 여기까지 오면 모델이 형식을 못 맞춘 것. 모델이 실제로 한 말을 그대로 들고 올라간다.
+        var e3 = new Error("응답을 정리하지 못했습니다.");
+        e3.parse = true;
+        e3.detail = text;
+        e3.stop = data.stop_reason || "";
+        throw e3;
       });
     });
   }
@@ -634,11 +675,19 @@ if ("serviceWorker" in navigator) {
 
   /* ---------- 상태 ---------- */
   function setNotice(node){ el.notice.textContent=""; if (node) el.notice.appendChild(node); }
-  function alertBox(title,msg){
+  function alertBox(title,msg,detail){
     var d = document.createElement("div"); d.className="alert";
     var b = document.createElement("b"); b.textContent=title;
     d.appendChild(b); d.appendChild(document.createElement("br"));
     d.appendChild(document.createTextNode(msg));
+    if (detail && String(detail).trim()){
+      var det = document.createElement("details"); det.className="more"; det.style.marginTop="10px";
+      var sum = document.createElement("summary"); sum.textContent="Claude가 실제로 답한 내용";
+      var pre = document.createElement("div");
+      pre.style.cssText = "white-space:pre-wrap;word-break:break-word;font-size:13px;margin-top:8px;padding:10px;background:var(--surface-2);border-radius:8px;max-height:220px;overflow:auto";
+      pre.textContent = String(detail).slice(0, 2000);
+      det.appendChild(sum); det.appendChild(pre); d.appendChild(det);
+    }
     return d;
   }
   var toastT;
@@ -678,13 +727,18 @@ if ("serviceWorker" in navigator) {
       setNotice(null); showResults(data); saveAll();
     })["catch"](function(e){
       if (e && e.name === "AbortError"){ setNotice(null); return; }
-      var m = String(e && e.message || e), title = "문제가 생겼습니다";
+      var m = String(e && e.message || e), title = "문제가 생겼습니다", detail = "";
       if (e && e.status === 401){ title="API 키가 올바르지 않습니다"; m="키 앞뒤에 공백이 붙지 않았는지 확인하시고, 콘솔에서 새로 발급해 보세요."; }
       else if (e && e.status === 429){ title="요청이 몰렸거나 한도를 넘었습니다"; m="잠시 뒤 다시 시도해 주세요."; }
       else if (e && e.status === 400 && /credit|balance/i.test(m)){ title="계정 잔액이 부족합니다"; m="console.anthropic.com → Billing 에서 크레딧을 충전해 주세요."; }
-      else if (e && e.parse){ title="결과를 정리하지 못했습니다"; m="한 번 더 눌러 주세요. 계속 그러면 강조할 내용을 짧게 줄여 보세요."; }
+      else if (e && e.parse){
+        detail = e.detail || "";
+        if (e.stop === "max_tokens"){ title="답이 너무 길어 잘렸습니다"; m="문자 길이를 한 단계 줄이거나, 사진 수를 줄여서 다시 시도해 주세요."; }
+        else if (detail){ title="Claude가 문자를 만들지 못했습니다"; m="아래 답변을 보시고 사진을 더 선명하게 찍거나 강조할 내용을 바꿔 시도해 주세요."; }
+        else { title="빈 답이 돌아왔습니다"; m="한 번 더 눌러 주세요. 계속 그러면 사진을 더 선명하게 찍어서 시도해 주세요."; }
+      }
       else if (/Failed to fetch|NetworkError|Load failed/i.test(m)){ title="연결하지 못했습니다"; m="인터넷 연결을 확인해 주세요. 회사 보안 프로그램이 막고 있을 수도 있습니다."; }
-      setNotice(alertBox(title, m));
+      setNotice(alertBox(title, m, detail));
     })["finally"](function(){
       busy = false; clearInterval(timer); el.stop.hidden = true; el.go.disabled = false; syncGo();
     });
